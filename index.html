@@ -839,6 +839,20 @@ tick();setInterval(tick,30000);
 /* ===================== 저장소 ===================== */
 const KEY='bltech_board_v2';
 let canPersist=true;
+let REMOTE=false;            // 공유 DB(/api/state) 연결 여부
+let _pushTimer=null;
+function fillSeed(d){         // 누락 섹션을 seed 기본값으로 보강 (load()와 동일 규칙)
+  const s=seed();
+  d=d||{}; d.board=d.board||s.board; d.dash=d.dash||s.dash;
+  for(const k in s.dash){if(d.dash[k]==null)d.dash[k]=s.dash[k];}
+  return d;
+}
+async function pushRemote(){
+  if(!REMOTE)return;
+  try{ await fetch('/api/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(STORE)}); }
+  catch(e){ /* 네트워크 실패 무시 — 로컬엔 이미 저장됨 */ }
+}
+function pushRemoteDebounced(){ if(!REMOTE)return; clearTimeout(_pushTimer); _pushTimer=setTimeout(pushRemote,700); }
 function seed(){var d=window.__BOARD_DATA__;return d?JSON.parse(JSON.stringify(d)):{board:{projects:[],tasks:[]},dash:{}};}
 
 function load(){
@@ -860,8 +874,10 @@ function load(){
 function save(){
   try{localStorage.setItem(KEY,JSON.stringify(STORE));}catch(e){canPersist=false;}
   const p=document.getElementById('persist');
-  if(canPersist){p.textContent='저장됨 · 로컬';p.className='persist';}
+  if(REMOTE){p.textContent='저장됨 · 공유 DB';p.className='persist';}
+  else if(canPersist){p.textContent='저장됨 · 로컬';p.className='persist';}
   else{p.textContent='임시 · 저장 안 됨';p.className='persist off';}
+  pushRemoteDebounced();
 }
 
 let STORE, DB, D;
@@ -1793,6 +1809,16 @@ function renderBOM(){
     else { console.warn('data.json HTTP', res.status); }
   }catch(e){ console.warn('data.json 로드 실패 — 빈 데이터로 시작', e); }
   STORE=load(); DB=STORE.board; D=STORE.dash;
+  // 공유 DB 시도: 연결되면 공유 데이터 사용, 안 되면 로컬 폴백(기존 동작)
+  try{
+    const rr=await fetch('/api/state',{cache:'no-store'});
+    if(rr.ok){
+      REMOTE=true;
+      const j=await rr.json();
+      if(j&&j.data&&(j.data.board||j.data.dash)){ STORE=fillSeed(j.data); DB=STORE.board; D=STORE.dash; }
+      else { await pushRemote(); }   // DB가 비어있으면 현재 데이터로 초기화
+    }
+  }catch(e){ /* 오프라인/미설정 → 로컬 폴백 유지 */ }
   save(); renderAll(); rerenderDash(); renderFinished(); renderCodes(); renderBOM();
 })();
 </script>
