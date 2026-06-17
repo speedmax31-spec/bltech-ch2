@@ -822,135 +822,7 @@ tick();setInterval(tick,30000);
 /* ===================== 저장소 ===================== */
 const KEY='bltech_board_v2';
 let canPersist=true;
-function seed(){return {
-  board:{
-    projects:[
-      {id:'p1',name:'통합운영 대시보드 · BOM 엔진',hint:'CORE',color:'var(--teal)'},
-      {id:'p2',name:'발주관리 시스템 (6탭)',hint:'PO',color:'var(--steel)'},
-      {id:'p3',name:'자재 재고·소요 추적',hint:'MRP',color:'var(--clay)'},
-      {id:'p4',name:'LOT 추적 · ISO 13485 QMS',hint:'QMS',color:'var(--amber)'},
-      {id:'p5',name:'ERP 연동 (장기)',hint:'ERP',color:'var(--ink-soft)'}
-    ],
-    tasks:[
-      {id:'t1',title:'스프린트 N타입 하지 포함 여부 확인',proj:'p1',prio:'high',status:'todo',due:'',notes:'BOM 엔진 원단 층 구성 가정 검증'},
-      {id:'t2',title:'수지 g/제품 기준값 확정 (NHR/ALPHA/SOFT)',proj:'p1',prio:'high',status:'todo',due:'',notes:'미입력 시 미설정 표시 중'},
-      {id:'t3',title:'프리컷 아웃박스 입수 규칙 정리',proj:'p1',prio:'mid',status:'doing',due:'',notes:'포장별 상이 → 표준화'},
-      {id:'t4',title:'발주관리 IQC 검사 탭 검토',proj:'p2',prio:'mid',status:'review',due:'',notes:''},
-      {id:'t5',title:'ASL 공급업체 목록 최신화',proj:'p2',prio:'mid',status:'todo',due:'',notes:''},
-      {id:'t6',title:'기본구매처 자재별 매핑 입력',proj:'p3',prio:'high',status:'todo',due:'',notes:'자동발주 연계 선행작업'},
-      {id:'t7',title:'핵심 품목 LOT 관리 On 전환',proj:'p4',prio:'mid',status:'todo',due:'',notes:'전 품목 현재 미설정'},
-      {id:'t8',title:'통합운영 대시보드 1차 완료',proj:'p1',prio:'low',status:'done',due:'',notes:''}
-    ]
-  },
-  dash:{
-    purchaseOrders:[],
-    poDraft:[],
-    kpisOps:[
-      {l:'오늘 신규 주문',v:'7건',s:'NEAL 4 · BEODERM 3',cls:'ok'},
-      {l:'생산 진행중',v:'12건',s:'완료예정 5건',cls:''},
-      {l:'재고 부족',v:'3종',s:'자동발주 대기 1',cls:'warn'},
-      {l:'미결 발주',v:'8건',s:'납기지연 1',cls:''},
-      {l:'출고 예정',v:'5건',s:'완료 2',cls:'ok'},
-      {l:'IQC 대기',v:'3건',s:'불합격 0',cls:'warn'}
-    ],
-    kpisSup:[
-      {l:'공급업체',v:'37개',s:'5개 카테고리',cls:''},
-      {l:'총 발주',v:'1,767',s:'5년 누적',cls:''},
-      {l:'고유 품목',v:'736종',s:'전체 SKU',cls:''},
-      {l:'평균 리드',v:'11일',s:'국내 기준',cls:''},
-      {l:'해외 수입',v:'1개사',s:'NORTHLINK',cls:'purple'}
-    ],
-    orders:[
-      {no:'#031',mid:'NEAL 캐스트 5cm',r:'200박스',s:'생산중'},
-      {no:'#030',mid:'BEODERM 하이드로겔',r:'500장',s:'QC 검사'},
-      {no:'#029',mid:'NEAL 스플린트 10cm',r:'150박스',s:'출하대기'},
-      {no:'#028',mid:'BEODERM 패치 대',r:'300장',s:'신규'},
-      {no:'#027',mid:'NEAL 캐스트 10cm',r:'100박스',s:'완료'},
-      {no:'#026',mid:'BEODERM 패치 소',r:'200장',s:'생산중'}
-    ],
-    alerts:[
-      {lv:'danger',t:'NORTHLINK 하지 원단 — 배송 30일 소요, 재고 안전선 도달 임박',time:'10분전'},
-      {lv:'danger',t:'나인화학 원료 안전재고 이하 → 자동 발주 승인 대기',time:'25분전'},
-      {lv:'warn',t:'저스트팩 포장재 발주 후 22일 경과 — 평균 리드 27일, 정상 범위',time:'1시간전'},
-      {lv:'warn',t:'엠텍스 원단 단일 의존도 높음 — 대체 공급사 검토 권장',time:'2시간전'},
-      {lv:'info',t:'동우섬유 SP 한겹 원단 입고 완료 — IQC 대기',time:'3시간전'}
-    ],
-    stocks:[
-      {name:'Needle Punched 원단',sup:'NORTHLINK(중국)',curr:1200,safe:1500,lead:'38일',flag:'import'},
-      {name:'BAMBERG FABRIC',sup:'NORTHLINK(중국)',curr:800,safe:600,lead:'50일',flag:'import'},
-      {name:'SP 한겹 원단',sup:'동우섬유',curr:9000,safe:5000,lead:'6일',flag:'ok'},
-      {name:'수용성 수지',sup:'나인화학',curr:1800,safe:2000,lead:'9일',flag:'warn'},
-      {name:'설명서(CAST)',sup:'선그라픽스',curr:8000,safe:5000,lead:'10일',flag:'ok'},
-      {name:'포장 박스',sup:'저스트팩',curr:300,safe:500,lead:'27일',flag:'danger'}
-    ],
-    cats:[
-      {icon:'ti-tag',cls:'ci-label',name:'라벨/설명서/소모품',
-       rows:[{n:'선그라픽스',o:92,p:57,l:10.3,note:'설명서 다종, REV 관리',flag:'multi'},{n:'중앙산업',o:67,p:99,l:null,note:'라벨 전문',flag:'multi'},{n:'라온',o:54,p:13,l:7.6,note:'잉크+라벨, 4인 동시메일',flag:'multi'},{n:'포스틱라벨',o:28,p:20,l:9.1,note:'ROLL 라벨',flag:'multi'}]},
-      {icon:'ti-stack-2',cls:'ci-fabric',name:'원단',
-       rows:[{n:'엠텍스',o:214,p:16,l:3.7,note:'핵심·최다·최속',flag:'multi'},{n:'대양화이바',o:75,p:13,l:16.8,note:'섬유유리',flag:'multi'},{n:'유니온통상',o:59,p:10,l:15.5,note:'',flag:'multi'},{n:'더블엠웍스',o:28,p:5,l:19.0,note:'리드 김',flag:'single'},{n:'동우섬유',o:22,p:8,l:5.9,note:'SP 한겹 1~8인치',flag:'multi'},{n:'한국바이린',o:15,p:2,l:10.7,note:'부직포',flag:'single'},{n:'NORTHLINK 하지',o:8,p:2,l:null,note:'생산8+배송30일, CIF',flag:'import'},{n:'NORTHLINK 상지',o:5,p:1,l:null,note:'생산20+배송30일',flag:'import'}]},
-      {icon:'ti-flask',cls:'ci-material',name:'원료(화학)',
-       rows:[{n:'나인화학',o:118,p:10,l:8.5,note:'최다 원료사',flag:'multi'},{n:'한라케미칼',o:104,p:9,l:6.7,note:'장기거래',flag:'multi'},{n:'에이유켐',o:89,p:2,l:9.5,note:'소품종 다량',flag:'single'},{n:'세광씨앤에스',o:68,p:1,l:8.7,note:'단일 전속',flag:'single'},{n:'상현인더스트리',o:50,p:1,l:10.4,note:'단일 전속',flag:'single'},{n:'한국특수윤활유',o:40,p:1,l:9.2,note:'윤활유 단일',flag:'single'},{n:'메가켐칼라',o:38,p:14,l:14.6,note:'색소 다종',flag:'multi'},{n:'원오켐텍',o:17,p:3,l:9.7,note:'신규',flag:'multi'},{n:'한국필라',o:12,p:1,l:7.7,note:'단일',flag:'single'},{n:'니카코리아',o:4,p:2,l:3.3,note:'비정기',flag:'single'},{n:'우보케미칼',o:3,p:2,l:4.7,note:'신규',flag:'single'}]},
-      {icon:'ti-circles',cls:'ci-core',name:'코어/클립/기타',
-       rows:[{n:'비즈엔몰드',o:56,p:4,l:13.8,note:'사출/몰드',flag:'multi'},{n:'건영산업',o:49,p:16,l:16.9,note:'최대리드 103일 존재',flag:'multi'},{n:'제형고무',o:24,p:2,l:9.0,note:'고무부품',flag:'single'},{n:'건강누리',o:17,p:4,l:5.8,note:'빠른 납기',flag:'multi'},{n:'보우테이프',o:13,p:1,l:13.2,note:'테이프 단일',flag:'single'},{n:'대성하이텍',o:4,p:3,l:21.0,note:'비정기',flag:'single'}]},
-      {icon:'ti-box',cls:'ci-pack',name:'포장',
-       rows:[{n:'저스트팩',o:106,p:102,l:27.4,note:'최장 리드(27일)',flag:'multi'},{n:'패키지파트너',o:91,p:119,l:15.2,note:'최다 SKU',flag:'multi'},{n:'창현팩',o:75,p:98,l:16.2,note:'다품종',flag:'multi'},{n:'유래코',o:45,p:23,l:22.3,note:'리드 김',flag:'multi'},{n:'다우포장부자재',o:27,p:59,l:13.7,note:'거래 종료 추정',flag:'multi'},{n:'성산제관',o:25,p:2,l:10.2,note:'제관 단일',flag:'single'},{n:'포장닥터',o:23,p:9,l:10.5,note:'',flag:'multi'},{n:'건우산업',o:2,p:2,l:11.5,note:'비정기',flag:'single'}]}
-    ],
-    risks:[
-      {n:'NORTHLINK',cat:'원단(수입)',factor:'배송 30일+, 컨테이너 단위, T/T 선금',lv:'high',act:'재고 안전선 2~3배, 자금계획 사전수립'},
-      {n:'엠텍스',cat:'원단',factor:'214건 최다 발주, 단일 의존도 높음',lv:'high',act:'대체 원단 공급사 1곳 확보'},
-      {n:'세광씨앤에스',cat:'원료',factor:'단일 품목 전속 공급',lv:'mid',act:'이중 소싱 검토'},
-      {n:'상현인더스트리',cat:'원료',factor:'단일 품목 전속 공급',lv:'mid',act:'이중 소싱 검토'},
-      {n:'저스트팩',cat:'포장',factor:'평균 리드 27일, 최장',lv:'mid',act:'발주 시점 앞당기기'},
-      {n:'건영산업',cat:'코어/기타',factor:'최대 리드 103일 건 존재',lv:'mid',act:'장납기 품목 별도 관리'}
-    ],
-    leadrisks:[
-      {n:'NORTHLINK 상지',f:'수입',l:'50일',note:'BAMBERG FABRIC, 생산 20일+배송 30일'},
-      {n:'NORTHLINK 하지',f:'수입',l:'38일',note:'생산 8일+배송 30일'},
-      {n:'저스트팩',f:'포장',l:'27.4일',note:'주문 제작 다품종'},
-      {n:'유래코',f:'포장',l:'22.3일',note:''},
-      {n:'대성하이텍',f:'코어',l:'21.0일',note:'비정기 발주'}
-    ],
-    cost:{
-      kpisCost:[
-        {l:'5년 추정 구매액',v:'182억',s:'전체 누적(보정)',cls:''},
-        {l:'연 평균',v:'36억',s:'2021~2026',cls:''},
-        {l:'단가 인상 품목',v:'23종',s:'5% 이상 상승',cls:'warn'},
-        {l:'최대 인상',v:'+890%',s:'JP-508 (원료)',cls:'danger'},
-        {l:'관리 품목',v:'696종',s:'37개 업체',cls:''}
-      ],
-      catBars:[
-        {name:'포장',cost:72.5,cls:'#D85A30',pct:40},
-        {name:'원료',cost:64.2,cls:'#1D9E75',pct:35},
-        {name:'원단',cost:34.4,cls:'#7F77DD',pct:19},
-        {name:'코어/기타',cost:7.6,cls:'#EF9F27',pct:4},
-        {name:'라벨/설명서',cost:3.2,cls:'#378ADD',pct:2}
-      ],
-      volatile:[
-        {name:'JP-508',sup:'한라케미칼',cat:'원료',min:3840,last:38000,n:43},
-        {name:'CAPA-2043',sup:'한라케미칼',cat:'원료',min:6500,last:16000,n:55},
-        {name:'CAST (OSSUR) 설명서',sup:'선그라픽스',cat:'라벨',min:96,last:211,n:22},
-        {name:'CAST IN BOX(NEAL) 2/3',sup:'패키지파트너',cat:'포장',min:730,last:1570,n:19},
-        {name:'NEAL SPLINT 설명서(HACHIKO)',sup:'선그라픽스',cat:'라벨',min:147,last:378,n:6},
-        {name:'LP-75F',sup:'한국특수윤활유',cat:'원료',min:3174,last:5210,n:40},
-        {name:'PP-1000',sup:'나인화학',cat:'원료',min:2900,last:4500,n:105},
-        {name:'SPLINT ROLL BOX(BSN) 3"',sup:'패키지파트너',cat:'포장',min:800,last:2030,n:4}
-      ],
-      costsup:[
-        {n:'저스트팩',cat:'포장',cost:55.8,pct:31},
-        {n:'에이유켐',cat:'원료',cost:23.8,pct:13},
-        {n:'나인화학',cat:'원료',cost:21.8,pct:12},
-        {n:'엠텍스',cat:'원단',cost:13.7,pct:8},
-        {n:'유니온통상',cat:'원단',cost:10.8,pct:6},
-        {n:'유래코',cat:'포장',cost:6.6,pct:4},
-        {n:'한라케미칼',cat:'원료',cost:5.3,pct:3},
-        {n:'비즈엔몰드',cat:'코어/기타',cost:4.8,pct:3},
-        {n:'세광씨앤에스',cat:'원료',cost:4.1,pct:2},
-        {n:'패키지파트너',cat:'포장',cost:3.9,pct:2}
-      ],
-      trend:[{m:'1월',v:285},{m:'2월',v:312},{m:'3월',v:298},{m:'4월',v:340},{m:'5월',v:325},{m:'6월',v:356}]
-    }
-  }
-};}
+function seed(){var d=window.__BOARD_DATA__;return d?JSON.parse(JSON.stringify(d)):{board:{projects:[],tasks:[]},dash:{}};}
 
 function load(){
   const s=seed();
@@ -975,8 +847,7 @@ function save(){
   else{p.textContent='임시 · 저장 안 됨';p.className='persist off';}
 }
 
-let STORE=load();
-let DB=STORE.board, D=STORE.dash;
+let STORE, DB, D;
 
 /* ===================== 백업 / 복원 ===================== */
 function exportData(){
@@ -1898,12 +1769,15 @@ function renderBOM(){
 }
 
 /* ===================== 초기화 ===================== */
-save();
-renderAll();
-rerenderDash();
-renderFinished();
-renderCodes();
-renderBOM();
+(async function boot(){
+  try{
+    const res=await fetch('data.json',{cache:'no-store'});
+    if(res.ok){ window.__BOARD_DATA__=await res.json(); }
+    else { console.warn('data.json HTTP', res.status); }
+  }catch(e){ console.warn('data.json 로드 실패 — 빈 데이터로 시작', e); }
+  STORE=load(); DB=STORE.board; D=STORE.dash;
+  save(); renderAll(); rerenderDash(); renderFinished(); renderCodes(); renderBOM();
+})();
 </script>
 </body>
 </html>
