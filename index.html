@@ -391,6 +391,13 @@ footer b{color:var(--ink-soft)}
 #content-bom .bom-filter input{font-size:12px;padding:4px 8px;border-radius:var(--border-radius-md);border:.5px solid var(--color-border-secondary);background:var(--panel-2);color:var(--color-text-primary);width:150px;margin-left:auto}
 #content-bom .bchip{font-size:11px;padding:3px 10px;border-radius:14px;border:.5px solid var(--color-border-secondary);background:transparent;cursor:pointer;color:var(--color-text-secondary)}
 #content-bom .bchip.active{background:var(--teal);color:#04110f;border-color:var(--teal);font-weight:600}
+/* 필터 드롭다운/칩 가시성 강화 */
+.dash select{font-weight:500!important;padding:6px 30px 6px 11px!important;min-width:120px;cursor:pointer;
+  border:1px solid #3a3b42!important;-webkit-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2314b8a6' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>")!important;
+  background-repeat:no-repeat!important;background-position:right 10px center!important;background-size:12px!important}
+.dash select:hover,.dash select:focus{border-color:var(--teal)!important;outline:none;box-shadow:0 0 0 2px rgba(20,184,166,.18)}
+.dash .mchip:not(.active),.dash .fchip:not(.active),.dash .pochip:not(.active),.dash .bchip:not(.active){border-color:#454650!important;color:var(--ink)!important}
 #content-bom .bom-badge{font-size:10px;font-weight:600;padding:1px 7px;border-radius:4px}
 #content-bom .tbl th{position:sticky;top:0;background:var(--color-background-secondary);z-index:1}
 .code-tab .code-foot{padding:.5rem 1rem;font-size:11px;color:var(--color-text-secondary);border-top:.5px solid var(--color-border-tertiary)}
