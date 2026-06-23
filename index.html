@@ -148,6 +148,20 @@ button{font-family:var(--sans);cursor:pointer}
 .modal .foot .right{display:flex;gap:10px}
 .del-btn{color:var(--red);border:1px solid var(--red-tint);background:var(--panel);font-size:13px;font-weight:600;padding:8px 14px;border-radius:9px}
 .del-btn:hover{background:var(--red-tint)}
+/* 재고 입출고 (로컬) */
+.inv-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 2px 4px}
+.inv-banner{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--amber);background:rgba(224,160,0,.08);border:1px solid var(--amber);border-radius:8px;padding:5px 11px}
+.inv-who{font-size:12px;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);width:96px}
+.inv-btn{font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;cursor:pointer;border:1px solid var(--line);background:var(--panel-2);display:inline-block}
+.inv-btn.inv-in{color:var(--teal);border-color:var(--teal)}
+.inv-btn.inv-out{color:var(--red);border-color:var(--red-tint)}
+.inv-btn:hover{filter:brightness(1.25)}
+.inv-hist{margin-top:10px;border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:320px}
+.inv-hist table{width:100%;border-collapse:collapse;font-size:12px}
+.inv-hist th,.inv-hist td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.inv-hist th{color:var(--ink-faint);font-weight:600;background:var(--panel-2);position:sticky;top:0}
+.inv-hist .r{text-align:right}
+.inv-del{color:var(--red);cursor:pointer;font-weight:700}
 
 footer{max-width:1280px;margin:28px auto 0;padding:0 26px;font-size:11px;color:var(--ink-faint);line-height:1.7}
 footer b{color:var(--ink-soft)}
@@ -657,6 +671,12 @@ footer b{color:var(--ink-soft)}
       </div>
       <div class="section-wrap">
         <div class="kpi-strip" id="dom-kpi"></div>
+        <div class="inv-bar">
+          <span class="inv-banner"><i class="ti ti-lock" aria-hidden="true"></i>나 혼자 모드 · 이 컴퓨터에만 저장 — 부서 실시간 공유하려면 Supabase 연결 필요</span>
+          <span style="font-size:11px;color:var(--color-text-secondary)">입력자</span>
+          <input class="inv-who" id="inv-who" placeholder="이름" oninput="setInvWho(this.value)">
+          <span class="ph-action accent" onclick="toggleInvHist()" style="margin-left:auto;cursor:pointer">입출고 이력 보기</span>
+        </div>
         <div class="filter-bar">
           <span style="font-size:11px;color:var(--color-text-secondary)">제품군</span>
           <span class="fchip active" data-g="all" onclick="filterDom('all',this)">전체</span>
@@ -675,11 +695,12 @@ footer b{color:var(--ink-soft)}
           <table class="tbl">
             <thead><tr>
               <th>제품군</th><th>브랜드</th><th>Type</th><th>Color</th><th>제품코드</th>
-              <th class="r">현재고</th><th class="r">안전재고</th><th>재고율</th><th class="r">과부족</th><th>상태</th>
+              <th class="r">현재고</th><th class="r">안전재고</th><th>재고율</th><th class="r">과부족</th><th>상태</th><th class="c">입출고</th>
             </tr></thead>
             <tbody id="dom-body"></tbody>
           </table>
         </div>
+        <div class="inv-hist" id="inv-hist" style="display:none"></div>
       </div>
 
       <!-- 하: 수출 재고현황 (데이터 대기) -->
@@ -1341,12 +1362,64 @@ function finGauge(stock,safe){
   const cls=r>=100?'gf-ok':r>=60?'gf-warn':r>=30?'gf-danger':'gf-crit';
   return `<span class="gauge"><span class="gauge-track"><span class="gauge-fill ${cls}" style="width:${Math.min(r,100)}%"></span></span><span style="font-size:10px;color:var(--color-text-secondary)">${r}%</span></span>`;
 }
+/* ===== 재고 입출고 (로컬 버전 — 나중에 Supabase 연결 시 부서 공유로 전환) ===== */
+let INV_WHO=''; try{ INV_WHO=localStorage.getItem('bltech_inv_who')||''; }catch(e){}
+let _invCtx=null;
+function invTxList(){ D.invTx=D.invTx||[]; return D.invTx; }
+function invNet(code){ let n=0; invTxList().forEach(t=>{ if(t.scope==='fin'&&t.code===code) n+=(t.kind==='in'?t.qty:-t.qty); }); return n; }
+function setInvWho(v){ INV_WHO=(v||'').trim(); try{localStorage.setItem('bltech_inv_who',INV_WHO);}catch(e){} }
+function ensureInvModal(){
+  if(document.getElementById('invScrim'))return;
+  document.body.insertAdjacentHTML('beforeend',
+    '<div class="scrim" id="invScrim"><div class="modal" style="max-width:380px">'+
+    '<h3 id="inv-title">입출고</h3><div class="body">'+
+    '<div class="fld"><label>수량</label><input type="number" id="inv-qty" min="1" value="1"></div>'+
+    '<div class="fld"><label>메모 (선택)</label><input type="text" id="inv-note" placeholder="예: 6월 생산 입고"></div>'+
+    '<div class="fld"><label>입력자</label><input type="text" id="inv-who2" placeholder="이름"></div></div>'+
+    '<div class="foot"><button class="del-btn" onclick="invClose()">취소</button>'+
+    '<div class="right"><button class="btn primary" onclick="invConfirm()">확인</button></div></div></div></div>');
+  document.getElementById('invScrim').addEventListener('click',e=>{ if(e.target.id==='invScrim') invClose(); });
+}
+function invOpen(code,kind){
+  ensureInvModal(); _invCtx={code,kind};
+  document.getElementById('inv-title').textContent=(kind==='in'?'입고 ＋':'출고 －')+' · '+code;
+  document.getElementById('inv-qty').value=1;
+  document.getElementById('inv-note').value='';
+  document.getElementById('inv-who2').value=INV_WHO;
+  document.getElementById('invScrim').classList.add('open');
+  setTimeout(()=>{try{document.getElementById('inv-qty').focus();}catch(e){}},50);
+}
+function invClose(){ const s=document.getElementById('invScrim'); if(s)s.classList.remove('open'); _invCtx=null; }
+function invConfirm(){
+  if(!_invCtx)return;
+  const qty=Math.abs(parseInt(document.getElementById('inv-qty').value,10)||0);
+  if(qty<=0){ toast('수량을 입력하세요'); return; }
+  setInvWho(document.getElementById('inv-who2').value);
+  const note=document.getElementById('inv-note').value.trim();
+  invTxList().unshift({scope:'fin',code:_invCtx.code,kind:_invCtx.kind,qty,who:INV_WHO,note,ts:new Date().toISOString()});
+  invClose(); save(); renderDom(); renderDomKPI(); renderInvHistory(); toast('기록되었습니다');
+}
+function invDelete(ts){ D.invTx=invTxList().filter(t=>t.ts!==ts); save(); renderDom(); renderDomKPI(); renderInvHistory(); toast('내역을 삭제했습니다'); }
+function toggleInvHist(){ const el=document.getElementById('inv-hist'); if(!el)return; el.style.display=el.style.display==='none'?'block':'none'; if(el.style.display==='block')renderInvHistory(); }
+function renderInvHistory(){
+  const el=document.getElementById('inv-hist'); if(!el)return;
+  const list=invTxList().slice(0,200);
+  if(!list.length){ el.innerHTML='<div style="padding:14px;color:var(--color-text-secondary);font-size:12px">입출고 내역이 없습니다.</div>'; return; }
+  const fmt=ts=>{const d=new Date(ts),p=n=>String(n).padStart(2,'0');return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;};
+  el.innerHTML='<table><thead><tr><th>시각</th><th>제품코드</th><th>구분</th><th class="r">수량</th><th>입력자</th><th>메모</th><th></th></tr></thead><tbody>'+
+    list.map(t=>`<tr><td>${fmt(t.ts)}</td><td style="font-weight:500">${esc(t.code)}</td>`+
+      `<td style="color:${t.kind==='in'?'var(--teal)':'var(--red)'};font-weight:600">${t.kind==='in'?'입고':'출고'}</td>`+
+      `<td class="r">${t.kind==='in'?'+':'-'}${t.qty.toLocaleString()}</td>`+
+      `<td>${esc(t.who||'-')}</td><td style="color:var(--color-text-secondary)">${esc(t.note||'')}</td>`+
+      `<td class="c"><span class="inv-del" onclick="invDelete('${t.ts}')">✕</span></td></tr>`).join('')+'</tbody></table>';
+}
 function renderDomKPI(){
   let total=0,safe=0,short=0,shortcnt=0,skus=0;
   NAESU.forEach(r=>{
     if(r[0]==='R')return;
-    skus++;total+=r[6];safe+=r[7];
-    if(r[8]<0){short+=r[8];shortcnt++;}
+    const st=r[6]+invNet(r[5]), sh=st-r[7];
+    skus++;total+=st;safe+=r[7];
+    if(sh<0){short+=sh;shortcnt++;}
   });
   document.getElementById('dom-kpi').innerHTML=`
     <div class="kpi-c"><div class="kpi-cl">총 SKU</div><div class="kpi-cv info">${skus}</div></div>
@@ -1362,14 +1435,15 @@ function renderDom(){
   let rows=NAESU.filter(r=>r[0]!=='R');
   if(domFilter!=='all')rows=rows.filter(r=>r[0]===domFilter);
   if(q)rows=rows.filter(r=>r[5].toUpperCase().includes(q));
-  if(shortOnly)rows=rows.filter(r=>r[8]<0);
+  if(shortOnly)rows=rows.filter(r=>(r[6]+invNet(r[5]))-r[7]<0);
 
   let html='';let lastG=null;
   rows.forEach(r=>{
-    const[g,b,t,j,c,code,stock,safe,short]=r;
+    const g=r[0],b=r[1],t=r[2],j=r[3],c=r[4],code=r[5],safe=r[7];
+    const stock=r[6]+invNet(code), short=stock-safe;
     if(g!==lastG){
       const gc=rows.filter(x=>x[0]===g).length;
-      html+=`<tr class="grp-row"><td colspan="10">${g} · ${gc}종</td></tr>`;
+      html+=`<tr class="grp-row"><td colspan="11">${g} · ${gc}종</td></tr>`;
       lastG=g;
     }
     const tag=short<0?'<span class="status-tag st-short">부족</span>':short===0&&safe>0?'<span class="status-tag st-low">정확</span>':'<span class="status-tag st-ok">충족</span>';
@@ -1384,9 +1458,10 @@ function renderDom(){
       <td>${finGauge(stock,safe)}</td>
       <td class="r short-val ${short<0?'sv-neg':'sv-pos'}">${short>0?'+':''}${short.toLocaleString()}</td>
       <td>${tag}</td>
+      <td class="c" style="white-space:nowrap"><span class="inv-btn inv-in" onclick="invOpen('${code}','in')">＋입고</span> <span class="inv-btn inv-out" onclick="invOpen('${code}','out')">－출고</span></td>
     </tr>`;
   });
-  if(!rows.length)html='<tr><td colspan="10" style="text-align:center;padding:1.5rem;color:var(--color-text-secondary)">조건에 맞는 제품이 없습니다</td></tr>';
+  if(!rows.length)html='<tr><td colspan="11" style="text-align:center;padding:1.5rem;color:var(--color-text-secondary)">조건에 맞는 제품이 없습니다</td></tr>';
   document.getElementById('dom-body').innerHTML=html;
 }
 function filterDom(g,el){
@@ -1398,6 +1473,7 @@ function filterDom(g,el){
 function renderFinished(){
   document.getElementById('fin-today').textContent=finToday();
   document.getElementById('fin-dom-update').textContent='2026년 6월 기준 · 매일 갱신';
+  ensureInvModal(); const _iw=document.getElementById('inv-who'); if(_iw)_iw.value=INV_WHO; renderInvHistory();
   renderDomKPI();
   renderDom();
 }
