@@ -111,6 +111,9 @@ button{font-family:var(--sans);cursor:pointer}
 .bgroup{display:flex;flex-direction:column;gap:14px}
 .grp-label{font-size:14px;font-weight:700;color:var(--ink);margin:4px 2px 0;display:flex;align-items:center;gap:8px}
 .grp-cnt{font-size:11px;font-weight:500;color:var(--ink-faint)}
+.add-mini{margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:7px;border:1px solid var(--teal);background:transparent;color:var(--teal);cursor:pointer;white-space:nowrap}
+.add-mini:hover{background:var(--teal);color:#04110f}
+.card .c-actions button[data-del]:hover{color:var(--red);border-color:var(--red-tint)}
 .col{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:12px;min-height:140px}
 .col.drag-over{border-color:var(--teal);background:var(--mint)}
 .col-head{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 12px}
@@ -1061,7 +1064,7 @@ function renderBoard(){
   // 공용 업무 (한 보드)
   const pub=DB.tasks.filter(x=>baseF(x)&&ownerOf(x)==='공용');
   const gPub=document.createElement('div');gPub.className='bgroup';
-  gPub.innerHTML=`<div class="grp-label">공용 업무 <span class="grp-cnt">미완료 ${pub.filter(x=>x.status!=='done').length} · 전체 ${pub.length}</span></div>`;
+  gPub.innerHTML=`<div class="grp-label">공용 업무 <span class="grp-cnt">미완료 ${pub.filter(x=>x.status!=='done').length} · 전체 ${pub.length}</span><button class="add-mini" data-add-owner="공용">+ 할 일</button></div>`;
   const pubBox=document.createElement('div');pubBox.className='person-sec';
   const pubCols=document.createElement('div');pubCols.className='board-cols';
   buildCols(pubCols,pub,t,'공용');
@@ -1074,12 +1077,13 @@ function renderBoard(){
     const ptasks=DB.tasks.filter(x=>baseF(x)&&ownerOf(x)===person);
     const open=ptasks.filter(x=>x.status!=='done').length;
     const sec=document.createElement('div');sec.className='person-sec';
-    sec.innerHTML=`<div class="person-hd"><span class="person-no">${i+1}</span>${person}<span class="person-cnt">미완료 ${open} · 전체 ${ptasks.length}</span></div>`;
+    sec.innerHTML=`<div class="person-hd"><span class="person-no">${i+1}</span>${person}<span class="person-cnt">미완료 ${open} · 전체 ${ptasks.length}</span><button class="add-mini" data-add-owner="${person}">+ 할 일</button></div>`;
     const cols=document.createElement('div');cols.className='board-cols';
     buildCols(cols,ptasks,t,person);
     sec.appendChild(cols);gPer.appendChild(sec);
   });
   board.appendChild(gPer);
+  board.querySelectorAll('[data-add-owner]').forEach(b=>b.onclick=()=>{ if(!DB.projects.length){toast('먼저 프로젝트가 필요합니다');return;} openModal(null,b.dataset.addOwner); });
 }
 function cardEl(x,t){
   const p=projById(x.proj)||{name:'미지정',color:'var(--ink-soft)',hint:'?'};
@@ -1091,21 +1095,22 @@ function cardEl(x,t){
     <div class="c-meta"><span class="ptag">${esc(p.hint)}</span>
       <span class="prio ${x.prio}">${PRIO[x.prio]}</span>
       ${x.due?`<span class="due ${dueCls}">▸ ${dueTxt}</span>`:''}</div>
-    <div class="c-actions"><button data-edit>수정</button></div>`;
+    <div class="c-actions"><button data-edit>수정</button><button data-del>삭제</button></div>`;
   el.addEventListener('dragstart',ev=>{ev.dataTransfer.setData('text/plain',x.id);el.classList.add('dragging');});
   el.addEventListener('dragend',()=>el.classList.remove('dragging'));
   el.querySelector('[data-edit]').addEventListener('click',ev=>{ev.stopPropagation();openModal(x);});
+  el.querySelector('[data-del]').addEventListener('click',ev=>{ev.stopPropagation();if(confirm(`'${x.title}' 할 일을 삭제할까요?`)){DB.tasks=DB.tasks.filter(z=>z.id!==x.id);save();renderAll();toast('할 일을 삭제했습니다');}});
   el.addEventListener('click',()=>openModal(x));
   return el;
 }
 function fillProjSelect(sel){sel.innerHTML=DB.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');}
-function openModal(task){
+function openModal(task,presetOwner){
   editing=task||null;
   document.getElementById('modalTitle').textContent=task?'할 일 수정':'할 일 추가';
   fillProjSelect(document.getElementById('mProj'));
   document.getElementById('mTitle').value=task?task.title:'';
   document.getElementById('mProj').value=task?task.proj:(filterProj||DB.projects[0].id);
-  document.getElementById('mOwner').value=task?ownerOf(task):'공용';
+  document.getElementById('mOwner').value=task?ownerOf(task):(presetOwner||'공용');
   document.getElementById('mPrio').value=task?task.prio:'mid';
   document.getElementById('mStatus').value=task?task.status:'todo';
   document.getElementById('mDue').value=task?task.due:'';
