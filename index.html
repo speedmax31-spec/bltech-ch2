@@ -162,6 +162,35 @@ button{font-family:var(--sans);cursor:pointer}
 .inv-hist th{color:var(--ink-faint);font-weight:600;background:var(--panel-2);position:sticky;top:0}
 .inv-hist .r{text-align:right}
 .inv-del{color:var(--red);cursor:pointer;font-weight:700}
+/* 개인 보드: 프로젝트 달력 + 담당 메뉴 */
+.cal-wrap{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:22px;box-shadow:var(--shadow)}
+.cal-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.cal-title{font-size:15px;font-weight:700}
+.cal-nav,.cal-today{font-size:12px;font-weight:600;padding:4px 10px;border-radius:7px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);cursor:pointer}
+.cal-today{margin-left:auto}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-wd{text-align:center;font-size:11px;font-weight:600;color:var(--ink-faint);padding:4px 0}
+.cal-wd.sun{color:#E0726A}.cal-wd.sat{color:#5A9BD8}
+.cal-cell{min-height:66px;border:1px solid var(--line);border-radius:8px;padding:4px;background:var(--panel-2);overflow:hidden}
+.cal-cell.empty{background:transparent;border:none}
+.cal-cell.today{border-color:var(--teal);box-shadow:0 0 0 1px var(--teal) inset}
+.cal-d{font-size:11px;color:var(--ink-soft);font-weight:600;margin-bottom:3px}
+.cal-projs{display:flex;flex-direction:column;gap:2px}
+.cal-proj{font-size:10px;font-weight:600;color:#04110f;background:var(--pc,var(--teal));border-radius:4px;padding:1px 5px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.plg{display:flex;align-items:center;gap:6px;font-size:12px;border:1px solid var(--line);border-radius:8px;padding:4px 8px;background:var(--panel-2)}
+.plg.active{border-color:var(--pc,var(--teal));box-shadow:0 0 0 1px var(--pc,var(--teal)) inset}
+.plg-dot{width:9px;height:9px;border-radius:3px;background:var(--pc,var(--teal));flex:0 0 auto}
+.plg-name{font-weight:600;cursor:pointer}
+.plg-meta{color:var(--ink-faint);font-size:11px}
+.plg-date{font-size:11px;padding:2px 5px;border-radius:5px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.owner-menu{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.own-grp{font-size:10.5px;font-weight:700;color:var(--ink-faint);letter-spacing:.04em}
+.own-sep{width:1px;height:16px;background:var(--line);margin:0 2px}
+.own-chip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:16px;border:1px solid var(--line);background:var(--panel-2);color:var(--ink-soft);cursor:pointer}
+.own-chip b{color:var(--ink-faint);font-weight:700;margin-left:3px}
+.own-chip.active{background:var(--teal);color:#04110f;border-color:var(--teal)}
+.own-chip.active b{color:#04110f}
 
 footer{max-width:1280px;margin:28px auto 0;padding:0 26px;font-size:11px;color:var(--ink-faint);line-height:1.7}
 footer b{color:var(--ink-soft)}
@@ -453,13 +482,23 @@ footer b{color:var(--ink-soft)}
       <div class="sum" style="--ac:var(--red)"><div class="l">지연</div><div class="n" id="sOver">0</div><div class="x">마감 경과 미완료</div></div>
       <div class="sum" style="--ac:var(--teal)"><div class="l">완료</div><div class="n" id="sDone">0</div><div class="x">누적</div></div>
     </div>
-    <div class="eyebrow">프로젝트 · 클릭하면 보드 필터</div>
-    <div class="proj-grid" id="projGrid"></div>
+    <div class="eyebrow">프로젝트 일정 · 달력</div>
+    <div class="cal-wrap">
+      <div class="cal-bar">
+        <button class="cal-nav" id="calPrev">◀</button>
+        <span class="cal-title" id="calTitle"></span>
+        <button class="cal-nav" id="calNext">▶</button>
+        <button class="cal-today" id="calToday">오늘</button>
+      </div>
+      <div class="cal-grid" id="projCal"></div>
+      <div class="proj-legend" id="projLegend"></div>
+    </div>
     <div class="board-head">
       <h2 id="boardTitle">전체 할 일</h2>
       <span class="filter-tag" id="filterTag" style="display:none"></span>
       <div class="spacer"></div>
     </div>
+    <div class="owner-menu" id="ownerMenu"></div>
     <div class="board" id="board"></div>
   </div>
 
@@ -796,6 +835,7 @@ footer b{color:var(--ink-soft)}
     <h3 id="modalTitle">할 일 추가</h3>
     <div class="body">
       <div class="fld"><label>할 일</label><input id="mTitle" type="text" placeholder="예: 스프린트 N타입 하지 포함 여부 확인"></div>
+      <div class="fld"><label>담당</label><select id="mOwner"><option value="공용">공용 할일</option><option value="차훈">차훈</option><option value="마대희">마대희</option><option value="이민환">이민환</option></select></div>
       <div class="fld-row">
         <div class="fld"><label>프로젝트</label><select id="mProj"></select></div>
         <div class="fld"><label>우선순위</label><select id="mPrio"><option value="high">높음</option><option value="mid" selected>보통</option><option value="low">낮음</option></select></div>
@@ -943,29 +983,64 @@ function renderSummary(){
   document.getElementById('sOver').textContent=open.filter(x=>x.due&&x.due<t).length;
   document.getElementById('sDone').textContent=DB.tasks.filter(x=>x.status==='done').length;
 }
-function renderProjects(){
-  const g=document.getElementById('projGrid');g.innerHTML='';
-  DB.projects.forEach(p=>{
-    const ts=DB.tasks.filter(x=>x.proj===p.id);
-    const done=ts.filter(x=>x.status==='done').length;
-    const pct=ts.length?Math.round(done/ts.length*100):0;
-    const el=document.createElement('div');
-    el.className='proj'+(filterProj===p.id?' active':'');
-    el.style.setProperty('--pc',p.color);
-    el.innerHTML=`<div class="top"><span class="pdot"></span><span class="ph">${esc(p.hint)}</span></div>
-      <div class="pname">${esc(p.name)}</div>
-      <div class="pmeta">할 일 ${ts.length}건 · 완료 ${done}</div>
-      <div class="bar"><i style="width:${pct}%"></i></div>
-      <div class="pct"><span>진척</span><span>${pct}%</span></div>`;
-    el.addEventListener('click',()=>{filterProj=filterProj===p.id?null:p.id;renderAll();});
-    g.appendChild(el);
-  });
+const OWNERS=['공용','차훈','마대희','이민환'];
+let ownerFilter='전체';
+let calYM=null;
+function ownerOf(x){return x.owner||'공용';}
+function curYM(){ if(!calYM){const d=new Date();calYM={y:d.getFullYear(),m:d.getMonth()};} return calYM; }
+function renderCalendar(){
+  const cal=document.getElementById('projCal'); if(!cal)return;
+  const ym=curYM(), y=ym.y, m=ym.m;
+  document.getElementById('calTitle').textContent=`${y}년 ${m+1}월`;
+  const first=new Date(y,m,1).getDay();
+  const days=new Date(y,m+1,0).getDate();
+  const today=todayStr();
+  const mk=`${y}-${String(m+1).padStart(2,'0')}`;
+  const byDate={};
+  DB.projects.forEach(p=>{ if(p.date&&p.date.startsWith(mk)){const day=+p.date.slice(8,10);(byDate[day]=byDate[day]||[]).push(p);} });
+  const wd=['일','월','화','수','목','금','토'];
+  let html=wd.map((d,i)=>`<div class="cal-wd${i===0?' sun':i===6?' sat':''}">${d}</div>`).join('');
+  for(let i=0;i<first;i++) html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=days;d++){
+    const ds=`${mk}-${String(d).padStart(2,'0')}`;
+    const chips=(byDate[d]||[]).map(p=>`<span class="cal-proj" style="--pc:${p.color}" data-pid="${p.id}" title="${esc(p.name)}">${esc(p.hint)}</span>`).join('');
+    html+=`<div class="cal-cell${ds===today?' today':''}"><div class="cal-d">${d}</div><div class="cal-projs">${chips}</div></div>`;
+  }
+  cal.innerHTML=html;
+  cal.querySelectorAll('.cal-proj').forEach(el=>el.onclick=()=>{const id=el.dataset.pid;filterProj=filterProj===id?null:id;renderAll();});
+  document.getElementById('calPrev').onclick=()=>{const c=curYM();c.m--;if(c.m<0){c.m=11;c.y--;}renderCalendar();};
+  document.getElementById('calNext').onclick=()=>{const c=curYM();c.m++;if(c.m>11){c.m=0;c.y++;}renderCalendar();};
+  document.getElementById('calToday').onclick=()=>{calYM=null;renderCalendar();};
 }
+function renderProjLegend(){
+  const g=document.getElementById('projLegend'); if(!g)return;
+  g.innerHTML=DB.projects.map(p=>{
+    const ts=DB.tasks.filter(x=>x.proj===p.id), done=ts.filter(x=>x.status==='done').length;
+    const pct=ts.length?Math.round(done/ts.length*100):0;
+    return `<div class="plg${filterProj===p.id?' active':''}" data-pid="${p.id}" style="--pc:${p.color}">
+      <span class="plg-dot"></span><span class="plg-name">${esc(p.name)}</span>
+      <span class="plg-meta">${pct}%</span>
+      <input type="date" class="plg-date" value="${p.date||''}" data-pid="${p.id}"></div>`;
+  }).join('');
+  g.querySelectorAll('.plg-name').forEach(el=>el.onclick=()=>{const id=el.closest('.plg').dataset.pid;filterProj=filterProj===id?null:id;renderAll();});
+  g.querySelectorAll('.plg-date').forEach(inp=>inp.onchange=()=>{const p=projById(inp.dataset.pid);if(p){p.date=inp.value;save();renderCalendar();renderProjLegend();}});
+}
+function renderOwnerMenu(){
+  const g=document.getElementById('ownerMenu'); if(!g)return;
+  const cnt=o=>DB.tasks.filter(x=>x.status!=='done'&&(o==='전체'||ownerOf(x)===o)).length;
+  const chip=(o,label)=>`<span class="own-chip${ownerFilter===o?' active':''}" data-o="${o}">${label} <b>${cnt(o)}</b></span>`;
+  g.innerHTML=`${chip('전체','전체')}<span class="own-sep"></span>`+
+    `<span class="own-grp">공용</span>${chip('공용','공용 할일')}<span class="own-sep"></span>`+
+    `<span class="own-grp">개인</span>${chip('차훈','차훈')}${chip('마대희','마대희')}${chip('이민환','이민환')}`;
+  g.querySelectorAll('.own-chip').forEach(c=>c.onclick=()=>{ownerFilter=c.dataset.o;renderAll();});
+}
+function renderProjects(){ renderCalendar(); renderProjLegend(); renderOwnerMenu(); }
 function renderBoard(){
   const board=document.getElementById('board');board.innerHTML='';
   const t=todayStr();
-  const tasks=DB.tasks.filter(x=>!filterProj||x.proj===filterProj);
-  document.getElementById('boardTitle').textContent=filterProj?projById(filterProj).name:'전체 할 일';
+  const tasks=DB.tasks.filter(x=>(!filterProj||x.proj===filterProj)&&(ownerFilter==='전체'||ownerOf(x)===ownerFilter));
+  const ot=ownerFilter==='전체'?'전체 할 일':(ownerFilter==='공용'?'공용 할일':ownerFilter+' 할일');
+  document.getElementById('boardTitle').textContent=filterProj?projById(filterProj).name+' · '+ot:ot;
   const ft=document.getElementById('filterTag');
   if(filterProj){ft.style.display='inline-flex';ft.innerHTML=`필터 <b>${esc(projById(filterProj).name)}</b><button title="해제">✕</button>`;
     ft.querySelector('button').onclick=()=>{filterProj=null;renderAll();};}
@@ -1008,6 +1083,7 @@ function openModal(task){
   fillProjSelect(document.getElementById('mProj'));
   document.getElementById('mTitle').value=task?task.title:'';
   document.getElementById('mProj').value=task?task.proj:(filterProj||DB.projects[0].id);
+  document.getElementById('mOwner').value=task?ownerOf(task):(ownerFilter!=='전체'?ownerFilter:'공용');
   document.getElementById('mPrio').value=task?task.prio:'mid';
   document.getElementById('mStatus').value=task?task.status:'todo';
   document.getElementById('mDue').value=task?task.due:'';
@@ -1023,7 +1099,7 @@ document.getElementById('scrim').addEventListener('click',e=>{if(e.target.id==='
 document.getElementById('mSave').onclick=()=>{
   const title=document.getElementById('mTitle').value.trim();
   if(!title){document.getElementById('mTitle').focus();return;}
-  const data={title,proj:document.getElementById('mProj').value,prio:document.getElementById('mPrio').value,
+  const data={title,owner:document.getElementById('mOwner').value,proj:document.getElementById('mProj').value,prio:document.getElementById('mPrio').value,
     status:document.getElementById('mStatus').value,due:document.getElementById('mDue').value,
     notes:document.getElementById('mNotes').value.trim()};
   if(editing){Object.assign(editing,data);}else{DB.tasks.push({id:'t'+Date.now(),...data});}
