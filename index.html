@@ -123,6 +123,11 @@ button{font-family:var(--sans);cursor:pointer}
 .embed-empty-ic{font-size:42px;color:var(--teal)}
 .embed-empty-t{font-size:16px;font-weight:700}
 .embed-empty-d{font-size:13px;color:var(--ink-faint);line-height:1.7}
+/* 상단 탭 줄: 메인 탭(왼쪽) + 룰렛 게임(오른쪽 분리) */
+.topnav{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
+.topnav .viewswitch{margin-bottom:0}
+.game-solo{margin-left:auto;border:1px solid var(--amber);color:var(--amber);background:transparent}
+.game-solo:hover,.game-solo.active{background:var(--amber);color:#1a1206}
 .col{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:12px;min-height:140px}
 .col.drag-over{border-color:var(--teal);background:var(--mint)}
 .col-head{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 12px}
@@ -489,11 +494,13 @@ footer b{color:var(--ink-soft)}
 
 <div class="wrap">
 
-  <div class="viewswitch">
-    <button class="vbtn active" id="vb-board" onclick="showView('board')"><i class="ti ti-layout-kanban"></i>개인 업무 보드</button>
-    <button class="vbtn" id="vb-dash" onclick="showView('dash')"><i class="ti ti-layout-dashboard"></i>통합 운영 대시보드</button>
-    <button class="vbtn" id="vb-game" onclick="showView('game')"><i class="ti ti-dice-5"></i>룰렛 게임</button>
-    <button class="vbtn" id="vb-chatbot" onclick="showView('chatbot')"><i class="ti ti-message-chatbot"></i>BLTECH 챗봇</button>
+  <div class="topnav">
+    <div class="viewswitch">
+      <button class="vbtn active" id="vb-board" onclick="showView('board')"><i class="ti ti-layout-kanban"></i>개인 업무 보드</button>
+      <button class="vbtn" id="vb-dash" onclick="showView('dash')"><i class="ti ti-layout-dashboard"></i>통합 운영 대시보드</button>
+      <button class="vbtn" id="vb-chatbot" onclick="showView('chatbot')"><i class="ti ti-message-chatbot"></i>BLTECH 챗봇</button>
+    </div>
+    <button class="vbtn game-solo" id="vb-game" onclick="showView('game')" title="취미 · 커피 내기 게임"><i class="ti ti-dice-5"></i>룰렛 게임</button>
   </div>
 
   <!-- 룰렛 게임 -->
