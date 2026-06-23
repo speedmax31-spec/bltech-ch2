@@ -114,6 +114,15 @@ button{font-family:var(--sans);cursor:pointer}
 .add-mini{margin-left:auto;font-size:11px;font-weight:600;padding:3px 10px;border-radius:7px;border:1px solid var(--teal);background:transparent;color:var(--teal);cursor:pointer;white-space:nowrap}
 .add-mini:hover{background:var(--teal);color:#04110f}
 .card .c-actions button[data-del]:hover{color:var(--red);border-color:var(--red-tint)}
+/* 임베드 탭 (룰렛 게임 / 챗봇) */
+.embed-wrap{height:calc(100vh - 200px);min-height:480px;border:1px solid var(--line);border-radius:13px;overflow:hidden;background:var(--panel);display:flex;flex-direction:column}
+.embed-frame{flex:1;width:100%;border:0;background:#fff}
+.embed-bar{display:flex;align-items:center;gap:10px;padding:7px 12px;border-bottom:1px solid var(--line)}
+.embed-url{font-family:var(--mono);font-size:11px;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.embed-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px;text-align:center;padding:30px}
+.embed-empty-ic{font-size:42px;color:var(--teal)}
+.embed-empty-t{font-size:16px;font-weight:700}
+.embed-empty-d{font-size:13px;color:var(--ink-faint);line-height:1.7}
 .col{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:12px;min-height:140px}
 .col.drag-over{border-color:var(--teal);background:var(--mint)}
 .col-head{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 12px}
@@ -483,6 +492,18 @@ footer b{color:var(--ink-soft)}
   <div class="viewswitch">
     <button class="vbtn active" id="vb-board" onclick="showView('board')"><i class="ti ti-layout-kanban"></i>개인 업무 보드</button>
     <button class="vbtn" id="vb-dash" onclick="showView('dash')"><i class="ti ti-layout-dashboard"></i>통합 운영 대시보드</button>
+    <button class="vbtn" id="vb-game" onclick="showView('game')"><i class="ti ti-dice-5"></i>룰렛 게임</button>
+    <button class="vbtn" id="vb-chatbot" onclick="showView('chatbot')"><i class="ti ti-message-chatbot"></i>BLTECH 챗봇</button>
+  </div>
+
+  <!-- 룰렛 게임 -->
+  <div class="view" id="view-game">
+    <div class="embed-wrap"><iframe id="game-frame" class="embed-frame" src="game.html" title="룰렛 게임"></iframe></div>
+  </div>
+
+  <!-- BLTECH 챗봇 -->
+  <div class="view" id="view-chatbot">
+    <div class="embed-wrap" id="chatbot-host"></div>
   </div>
 
   <!-- 개인 업무 보드 -->
@@ -896,6 +917,23 @@ function showView(name){
   document.getElementById('view-'+name).classList.add('active');
   document.getElementById('vb-'+name).classList.add('active');
   document.getElementById('addBtn').style.display = name==='board' ? '' : 'none';
+  if(name==='chatbot')renderChatbot();
+}
+function renderChatbot(){
+  const host=document.getElementById('chatbot-host'); if(!host)return;
+  const url=localStorage.getItem('bltech_chatbot_url')||'';
+  if(url){
+    host.innerHTML=`<div class="embed-bar"><span class="embed-url">${esc(url)}</span><button class="add-mini" onclick="setChatbotUrl()">주소 변경</button></div><iframe class="embed-frame" src="${esc(url)}" title="BLTECH 챗봇"></iframe>`;
+  }else{
+    host.innerHTML=`<div class="embed-empty"><div class="embed-empty-ic"><i class="ti ti-message-chatbot"></i></div><div class="embed-empty-t">BLTECH 챗봇 연결 대기</div><div class="embed-empty-d">챗봇 서버를 실행하거나 배포한 뒤 주소를 입력하면 여기에 연결됩니다.<br>예) http://localhost:3000 또는 배포 URL</div><button class="btn primary" onclick="setChatbotUrl()">챗봇 주소 입력</button></div>`;
+  }
+}
+function setChatbotUrl(){
+  const cur=localStorage.getItem('bltech_chatbot_url')||'';
+  const v=prompt('BLTECH 챗봇 주소 (예: http://localhost:3000)', cur);
+  if(v===null)return;
+  localStorage.setItem('bltech_chatbot_url',(v||'').trim());
+  renderChatbot();
 }
 function showTab(name){
   document.querySelectorAll('.dash .tab,.tab-content').forEach(el=>el.classList.remove('active'));

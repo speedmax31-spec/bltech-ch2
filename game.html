@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#0f1226" />
+<title>☕ 커피 내기 구슬 레이스</title>
+<style>
+  :root{
+    --bg:#0f1226; --bg2:#161a3a; --panel:#1d2350; --panel2:#252c66;
+    --line:#343c7d; --text:#eef1ff; --muted:#9aa3d8; --accent:#ffd24a;
+    --accent2:#7c8bff; --good:#46e08a; --bad:#ff6b8b; --shadow:rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Segoe UI",system-ui,sans-serif;
+    background:radial-gradient(1200px 600px at 50% -10%, #20275e 0%, var(--bg) 60%);
+    color:var(--text); -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:16px 14px calc(34px + env(safe-area-inset-bottom))}
+  header.top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  header.top h1{font-size:21px;margin:0;letter-spacing:-.5px}
+  header.top .sub{color:var(--muted);font-size:12.5px}
+  .badge{background:var(--accent);color:#241c00;font-weight:800;border-radius:999px;
+    padding:4px 10px;font-size:12px;flex:0 0 auto}
+
+  .card{background:linear-gradient(180deg,var(--panel),var(--bg2));
+    border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 30px var(--shadow)}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .col{flex:1 1 280px;min-width:0}
+
+  label{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
+  textarea,input[type=text],select{
+    width:100%;background:#11163a;border:1px solid var(--line);color:var(--text);
+    border-radius:10px;padding:11px 12px;font-size:16px;outline:none;font-family:inherit}
+  textarea{min-height:150px;resize:vertical;line-height:1.55}
+  textarea:focus,input:focus,select:focus{border-color:var(--accent2)}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+
+  .namelist{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px}
+  .nrow{display:flex;align-items:center;gap:6px;min-width:0}
+  .nrow .nnum{width:18px;text-align:right;color:var(--muted);font-weight:700;
+    font-variant-numeric:tabular-nums;font-size:13px;flex:0 0 auto}
+  .nrow .pname{flex:1;min-width:0;padding:9px 8px;font-size:14px}
+
+  .modes{display:flex;gap:8px;margin-top:4px}
+  .mode{flex:1;text-align:center;border:1px solid var(--line);border-radius:12px;
+    padding:13px 6px;cursor:pointer;background:#11163a;transition:.15s;user-select:none;
+    -webkit-tap-highlight-color:transparent}
+  .mode b{display:block;font-size:18px}
+  .mode small{color:var(--muted);font-size:11.5px}
+  .mode.sel{border-color:var(--accent);background:#2a2406;box-shadow:0 0 0 2px rgba(255,210,74,.25) inset}
+  .mode.sel small{color:#ffe9a3}
+
+  .btn{appearance:none;border:0;border-radius:12px;padding:13px 18px;font-size:16px;
+    font-weight:800;cursor:pointer;transition:.12s;font-family:inherit;touch-action:manipulation;
+    -webkit-tap-highlight-color:transparent}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:linear-gradient(180deg,#ffe07a,var(--accent));color:#241c00}
+  .btn.ghost{background:#222a63;color:var(--text);border:1px solid var(--line)}
+  .btn.lg{width:100%;padding:16px;font-size:18px}
+
+  /* ===== GAME ===== */
+  #game{display:none}
+  .stage{display:flex;flex-direction:column;gap:12px}
+  .canvas-box{background:#0a0d22;border:1px solid var(--line);border-radius:16px;overflow:hidden;position:relative}
+  canvas{display:block;width:100%;height:54vh;min-height:320px}
+  .side{display:flex;flex-direction:column;gap:12px;min-height:0}
+
+  .caster{background:linear-gradient(180deg,#241b45,#1a1436);border:1px solid #4a3a86;
+    border-radius:14px;padding:11px 13px}
+  .caster .tag{font-size:11px;color:#caa6ff;font-weight:800;letter-spacing:1px}
+  .caster .line{font-size:15.5px;line-height:1.45;margin-top:4px;min-height:23px}
+
+  .standings{background:#11163a;border:1px solid var(--line);border-radius:14px;
+    padding:8px;max-height:32vh;overflow:auto}
+  .standings h3{margin:2px 4px 6px;font-size:12.5px;color:var(--muted)}
+  .srow{display:flex;align-items:center;gap:8px;padding:6px;border-radius:8px;font-size:14px}
+  .srow .dot{width:14px;height:14px;border-radius:50%;flex:0 0 auto;border:2px solid #fff3}
+  .srow .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .srow .pos{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px;flex:0 0 auto}
+  .srow.fin{background:#0f3324}
+  .srow.fin .pos{color:var(--good);font-weight:800}
+  .srow.run .pos{color:#cdd4ff;font-weight:700}
+  .srow.run{transition:background .2s}
+  .srow .pos .up{color:var(--good);font-size:11px}
+  .srow .pos .down{color:var(--bad);font-size:11px}
+
+  .controls{display:flex;gap:8px}
+  .controls .btn{flex:1}
+
+  /* desktop: 2-column */
+  @media(min-width:780px){
+    .stage{display:grid;gap:14px;grid-template-columns:2fr 1fr;
+      grid-template-rows:auto 1fr;grid-template-areas:"canvas caster" "canvas side";height:74vh}
+    .canvas-box{grid-area:canvas;height:100%}
+    canvas{height:100%}
+    .caster{grid-area:caster}
+    .side{grid-area:side;overflow:hidden}
+    .standings{max-height:none;flex:1}
+  }
+
+  /* ===== RESULT ===== */
+  #result{display:none}
+  .result-card{text-align:center}
+  .result-card .crown{font-size:40px}
+  .result-card h2{margin:6px 0 2px;font-size:22px}
+  .winners{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:16px 0}
+  .winner{background:linear-gradient(180deg,#3a2a06,#2a2105);border:2px solid var(--accent);
+    border-radius:14px;padding:14px 18px;min-width:108px;flex:0 1 auto}
+  .winner .wdot{width:22px;height:22px;border-radius:50%;margin:0 auto 6px;border:2px solid #fff}
+  .winner .wn{font-size:18px;font-weight:800}
+  .winner .wp{color:#ffe9a3;font-size:12px;margin-top:2px}
+  .full-rank{text-align:left;max-width:420px;margin:14px auto 0}
+  .full-rank .srow{font-size:13.5px}
+  .res-actions{margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+  footer{color:var(--muted);font-size:12px;text-align:center;margin-top:22px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <span class="badge">☕ BET</span>
+    <div>
+      <h1>커피 내기 구슬 레이스</h1>
+      <div class="sub">구슬이 굴러떨어져 순위가 정해집니다</div>
+    </div>
+  </header>
+
+  <!-- ================= SETUP ================= -->
+  <section id="setup" class="card">
+    <label>참가자 이름 (최대 15명 · 빈 칸은 자동 제외)</label>
+    <div id="nameList" class="namelist"></div>
+    <div class="hint">번호 칸에 이름을 입력하세요. 입력한 사람만 출전합니다.</div>
+    <button class="btn ghost" id="shuffleBtn" style="margin-top:10px;width:100%">🔀 순서 섞기</button>
+
+    <div style="margin-top:16px">
+      <label>당첨 인원 (마지막에 도착한 N명)</label>
+      <div class="modes" id="modes">
+        <div class="mode sel" data-n="1"><b>1명</b><small>마지막 1명</small></div>
+        <div class="mode" data-n="2"><b>2명</b><small>마지막 2명</small></div>
+        <div class="mode" data-n="3"><b>3명</b><small>마지막 3명</small></div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <label for="bet">내기 내용 (당첨자가 할 일)</label>
+      <input type="text" id="bet" value="커피 사기" />
+    </div>
+
+    <div style="margin-top:18px">
+      <button class="btn primary lg" id="startBtn">🏁 레이스 시작</button>
+    </div>
+  </section>
+
+  <!-- ================= GAME ================= -->
+  <section id="game">
+    <div class="stage">
+      <div class="caster">
+        <div class="tag">📢 실시간 중계</div>
+        <div class="line" id="casterLine">선수들이 출발선에 모였습니다...</div>
+      </div>
+      <div class="canvas-box"><canvas id="cv"></canvas></div>
+      <div class="side">
+        <div class="standings">
+          <h3>도착 현황</h3>
+          <div id="standList"></div>
+        </div>
+        <div class="controls">
+          <button class="btn ghost" id="backBtn">⟲ 설정으로</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= RESULT ================= -->
+  <section id="result" class="card result-card">
+    <div class="crown">☕</div>
+    <h2 id="resTitle">결과 발표</h2>
+    <div class="hint" id="resBet"></div>
+    <div class="winners" id="winners"></div>
+    <div class="full-rank">
+      <h3 style="color:var(--muted);font-size:13px;margin-left:4px">전체 순위</h3>
+      <div id="fullRank"></div>
+    </div>
+    <div class="res-actions">
+      <button class="btn primary" id="againBtn">🔁 같은 인원 다시</button>
+      <button class="btn ghost" id="resetBtn">⟲ 처음으로</button>
+    </div>
+  </section>
+
+  <footer>외부 라이브러리 없이 동작하는 단일 페이지 · 스마트폰 지원</footer>
+</div>
+
+<script>
+"use strict";
+/* =========================================================================
+   커피 내기 구슬 레이스 — 단일 파일, 외부 의존성/서버/키 없음
+   - 자체 구현 2D 물리(중력 + 핀/벽/구슬 충돌)
+   - 카메라가 선두를 따라 내려가며 마지막 도착까지 추적
+   - 내장 실시간 중계(템플릿 기반)
+   ========================================================================= */
+
+const $ = (s)=>document.querySelector(s);
+const setupEl=$("#setup"), gameEl=$("#game"), resultEl=$("#result");
+const cv=$("#cv"), ctx=cv.getContext("2d");
+const casterLine=$("#casterLine"), standList=$("#standList");
+
+/* ---------- 월드/물리 상수 ---------- */
+const W = 560;            // 월드(코스) 가로 폭
+const MARBLE_R = 16;
+const PEG_R = 7;
+const STEP_RATE = 2.8;    // 평균 프레임당 물리 스텝 = 재생 속도 (낮을수록 슬로모션, 소수 가능)
+const GRAV = 0.021;       // 스텝당 중력 가속(궤적/바운스 느낌 결정)
+const REST = 0.5;         // 핀/벽 반발계수(높을수록 더 통통 튐)
+const VMAX = 3.0;         // 스텝당 최대 속도(터널링 방지 상한)
+const DAMP = 0.990;       // 속도 감쇠 → 부드럽게(낮으면 더 느리고 더 부드러움)
+const SPIN_KICK = 3.0;    // 회전 막대가 구슬을 튕기는 세기
+const WHEEL_KICK = 1.3;   // 물레방아가 구슬을 실어나르는 세기(약하게)
+const MAX_RACE_MS = 120000;// 안전 타임아웃
+
+let obstacles=[], spinners=[], wheels=[], finishY=0, courseHeight=0;
+let marbles=[], active=[], finished=[];
+let running=false, rafId=0, raceStartTs=0, stepAcc=0, standFrame=0;
+let scale=1, cameraY=0, dpr=1;
+let winnerCount=1, betLabel="커피 사기";
+
+const rand=(a,b)=>a+Math.random()*(b-a);
+const clamp=(v,a,b)=>v<a?a:(v>b?b:v);
+const hueColor=(i,n)=>`hsl(${Math.round(i*360/n)} 85% 60%)`;
+const esc=(s)=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* =========================================================================
+   설정 UI (마지막 입력값 저장/복원)
+   ========================================================================= */
+const SAMPLE = ["홍길동","김철수","이영희","박민수","최지우","정해인"];
+document.querySelectorAll(".mode").forEach(m=>{
+  m.addEventListener("click",()=>{
+    document.querySelectorAll(".mode").forEach(x=>x.classList.remove("sel"));
+    m.classList.add("sel");
+    localStorage.setItem("cr_mode", m.dataset.n);
+  });
+});
+function selectedMode(){
+  const sel=document.querySelector(".mode.sel");
+  return sel?parseInt(sel.dataset.n,10):1;
+}
+/* 참가자 입력칸(번호 1~15) */
+const MAX_PLAYERS=15;
+function nameInputs(){ return [...document.querySelectorAll('#nameList .pname')]; }
+function rawNames(){ return nameInputs().map(el=>el.value.trim()).filter(Boolean); }
+function setNames(arr){ nameInputs().forEach((el,i)=>{ el.value=arr[i]||''; }); }
+function saveNames(){ localStorage.setItem("cr_names", rawNames().join("\n")); }
+(function buildNameList(){
+  let h='';
+  for(let i=1;i<=MAX_PLAYERS;i++){
+    const ph = i<=4 ? ['홍길동','김철수','이영희','박민수'][i-1] : '이름';
+    h+=`<div class="nrow"><span class="nnum">${i}</span><input class="pname" type="text" maxlength="14" placeholder="${ph}" autocomplete="off"></div>`;
+  }
+  document.querySelector('#nameList').innerHTML=h;
+})();
+
+/* 복원 */
+(function restore(){
+  const n=localStorage.getItem("cr_names"); if(n) setNames(n.split("\n").map(s=>s.trim()).filter(Boolean));
+  const b=localStorage.getItem("cr_bet"); if(b) $("#bet").value=b;
+  const md=localStorage.getItem("cr_mode")||"1";
+  document.querySelectorAll(".mode").forEach(x=>x.classList.toggle("sel", x.dataset.n===md));
+})();
+
+function parseNames(){
+  let list=rawNames();
+  if(list.length===0) list=SAMPLE.slice();
+  if(list.length>MAX_PLAYERS) list=list.slice(0,MAX_PLAYERS);
+  const seen={};
+  return list.map(n=>{ seen[n]=(seen[n]||0)+1; return seen[n]>1?`${n}(${seen[n]})`:n; });
+}
+
+$("#shuffleBtn").addEventListener("click", ()=>{
+  let list=rawNames();
+  if(list.length===0) list=SAMPLE.slice();
+  for(let i=list.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [list[i],list[j]]=[list[j],list[i]]; }
+  setNames(list); saveNames();
+});
+
+$("#startBtn").addEventListener("click", ()=>{
+  winnerCount=selectedMode();
+  betLabel=$("#bet").value.trim()||"커피 사기";
+  const names=parseNames();
+  if(winnerCount>=names.length){
+    alert(`참가자(${names.length}명)보다 당첨 인원(${winnerCount}명)이 많거나 같습니다.\n인원을 늘리거나 당첨 수를 줄여주세요.`);
+    return;
+  }
+  saveNames();
+  localStorage.setItem("cr_bet",betLabel);
+  startRace(names);
+});
+$("#backBtn").addEventListener("click", stopAndReset);
+$("#resetBtn").addEventListener("click", stopAndReset);
+$("#againBtn").addEventListener("click", ()=>{ startRace(marbles.map(m=>m.name)); });
+
+function showSection(which){
+  setupEl.style.display  = which==="setup" ? "block":"none";
+  gameEl.style.display   = which==="game"  ? "block":"none";
+  resultEl.style.display = which==="result"? "block":"none";
+  window.scrollTo(0,0);
+}
+function stopAndReset(){ running=false; cancelAnimationFrame(rafId); showSection("setup"); }
+
+/* =========================================================================
+   코스 생성 (핀 격자)
+   ========================================================================= */
+function buildCourse(){
+  obstacles=[]; spinners=[]; wheels=[];
+  let y=300;
+
+  // 핀 줄: bigEvery 마다 큰 범퍼
+  const pegRows=(rows,gap,bigEvery)=>{
+    for(let r=0;r<rows;r++){
+      const off=(r%2)*(gap/2); let c=0;
+      for(let x=44+off; x<W-30; x+=gap){
+        const big = bigEvery && (c%bigEvery===bigEvery-1) && r%2===0;
+        obstacles.push({type:'peg', x, y, r: big?11:PEG_R}); c++;
+      }
+      y+=72;
+    }
+  };
+  // 회전 막대(스피너) 줄
+  const spinnerRow=(count,spin)=>{
+    y+=56;
+    const slot=W/(count+1);
+    for(let i=0;i<count;i++){
+      spinners.push({type:'spinner', cx:slot*(i+1), cy:y, arms:3, len:50, halfw:7,
+        ang:i*1.0, spin:(i%2?spin:-spin)});
+    }
+    y+=104;
+  };
+  // 좌우 번갈아 튀어나온 경사벽
+  const zigWalls=(n)=>{
+    y+=24;
+    for(let k=0;k<n;k++){
+      const fromLeft=k%2===0;
+      const x1=fromLeft?0:W, x2=fromLeft?W*0.52:W*0.48;
+      obstacles.push({type:'wall', x1, y1:y, x2, y2:y+110, thick:8});
+      y+=130;
+    }
+  };
+  // 마지막 입구: 깔때기(Y) + 물레방아 → 막판 순위 역전 존
+  const addYZone=()=>{
+    const cx=W/2, hw=128, Lx=cx-hw, Rx=cx+hw;
+    const yTop=y+24, funH=150;
+    obstacles.push({type:'wall', x1:24,   y1:yTop, x2:Lx, y2:yTop+funH, thick:9});  // 깔때기 좌
+    obstacles.push({type:'wall', x1:W-24, y1:yTop, x2:Rx, y2:yTop+funH, thick:9});  // 깔때기 우
+    const yStem=yTop+funH;
+    const yFloor=yStem+250;        // 웅덩이 바닥
+    const gap=30;                  // 가운데 출구 반폭(공이 적당히 고였다 빠짐)
+    obstacles.push({type:'wall', x1:Lx, y1:yStem, x2:Lx, y2:yFloor+26, thick:9}); // 통로 좌
+    obstacles.push({type:'wall', x1:Rx, y1:yStem, x2:Rx, y2:yFloor+26, thick:9}); // 통로 우
+    obstacles.push({type:'wall', x1:Lx, y1:yFloor, x2:cx-gap, y2:yFloor+50, thick:9}); // 웅덩이 바닥 좌→가운데
+    obstacles.push({type:'wall', x1:Rx, y1:yFloor, x2:cx+gap, y2:yFloor+50, thick:9}); // 웅덩이 바닥 우→가운데
+    // 웅덩이 위에서 고인 공을 휘젓는 큰 물레방아(바닥에서 살짝 띄움)
+    wheels.push({cx, cy:yStem+150, R:84, rin:20, arms:7, halfw:10, lip:28, ang:0, spin:0.015});
+    finishY=yFloor+50+70;
+    y=finishY;
+  };
+
+  pegRows(7,58,0);
+  spinnerRow(3,0.045);
+  pegRows(5,58,4);
+  zigWalls(4);
+  pegRows(5,52,0);
+  spinnerRow(4,0.05);
+  pegRows(7,54,5);
+  zigWalls(3);
+  addYZone();
+
+  courseHeight=finishY+120;
+}
+
+/* =========================================================================
+   레이스 시작
+   ========================================================================= */
+function startRace(names){
+  buildCourse();
+  const n=names.length;
+  marbles=[]; finished=[];
+  const slot=W/(n+1);
+  for(let i=0;i<n;i++){
+    marbles.push({
+      i, name:names[i], color:hueColor(i,n),
+      x:slot*(i+1)+rand(-5,5), y:64+(i%2)*34+rand(0,14),   // 2줄 지그재그 출발(많아도 안 겹침)
+      vx:rand(-1,1), vy:rand(0,1),
+      r:MARBLE_R, finished:false, place:0, maxY:0, stuck:0, trail:[]
+    });
+  }
+  active=marbles.slice();
+
+  showSection("game");      // 먼저 보이게 한 뒤 크기 측정
+  fitCanvas();
+  cameraY=0; stepAcc=0; running=true; raceStartTs=performance.now();
+  resetCaster(names);
+  renderStandings();
+  cancelAnimationFrame(rafId);
+  loop();
+}
+
+/* =========================================================================
+   메인 루프
+   ========================================================================= */
+function loop(){
+  if(!running) return;
+  stepAcc+=STEP_RATE; const nSteps=Math.floor(stepAcc); stepAcc-=nSteps;
+  for(let s=0;s<nSteps;s++) physicsStep();
+  draw();
+  maybeComment();
+  if(++standFrame%6===0) renderStandings();   // 실시간 순위 갱신(약 10회/초)
+  const timeout=performance.now()-raceStartTs>MAX_RACE_MS;
+  if(active.length===0 || timeout){
+    if(timeout) forceFinishRemaining();
+    finishRace(); return;
+  }
+  rafId=requestAnimationFrame(loop);
+}
+
+/* ---------- 충돌 헬퍼 ---------- */
+function closestOnSeg(px,py,x1,y1,x2,y2){
+  const dx=x2-x1, dy=y2-y1, l2=dx*dx+dy*dy||1e-6;
+  let t=((px-x1)*dx+(py-y1)*dy)/l2; t=clamp(t,0,1);
+  return [x1+t*dx, y1+t*dy];
+}
+function resolveCapsule(m,x1,y1,x2,y2,thick){
+  const [cx,cy]=closestOnSeg(m.x,m.y,x1,y1,x2,y2);
+  const dx=m.x-cx, dy=m.y-cy, minD=m.r+thick, d2=dx*dx+dy*dy;
+  if(d2>=minD*minD) return null;
+  const d=Math.sqrt(d2)||1e-4, nx=dx/d, ny=dy/d, pen=minD-d;
+  m.x+=nx*pen; m.y+=ny*pen;
+  const vn=m.vx*nx+m.vy*ny;
+  if(vn<0){ m.vx-=(1+REST)*vn*nx; m.vy-=(1+REST)*vn*ny; }
+  return {nx,ny,cx,cy};
+}
+function resolvePeg(m,p){
+  const dx=m.x-p.x, dy=m.y-p.y, minD=m.r+p.r, d2=dx*dx+dy*dy;
+  if(d2>=minD*minD) return;
+  const d=Math.sqrt(d2)||1e-4, nx=dx/d, ny=dy/d, pen=minD-d;
+  m.x+=nx*pen; m.y+=ny*pen;
+  const vn=m.vx*nx+m.vy*ny;
+  if(vn<0){ m.vx-=(1+REST)*vn*nx; m.vy-=(1+REST)*vn*ny; }
+  const topFactor=clamp(-ny,0,1);
+  m.vx+=(Math.random()<0.5?-1:1)*(0.2+topFactor*0.55);
+}
+function resolveWall(m,o){
+  if(resolveCapsule(m,o.x1,o.y1,o.x2,o.y2,o.thick)) m.vx+=(Math.random()<0.5?-1:1)*0.2;
+}
+function resolveSpinner(m,sp){
+  for(let a=0;a<sp.arms;a++){
+    const ang=sp.ang+a*(Math.PI*2/sp.arms);
+    const ex=sp.cx+Math.cos(ang)*sp.len, ey=sp.cy+Math.sin(ang)*sp.len;
+    const hit=resolveCapsule(m,sp.cx,sp.cy,ex,ey,sp.halfw);
+    if(hit){
+      const rx=hit.cx-sp.cx, ry=hit.cy-sp.cy;   // 회전 표면 속도(접선)만큼 튕김
+      m.vx+=-sp.spin*ry*SPIN_KICK;
+      m.vy+= sp.spin*rx*SPIN_KICK;
+    }
+  }
+}
+function applyWheelKick(m,hit,wh){
+  if(!hit) return;
+  const rx=hit.cx-wh.cx, ry=hit.cy-wh.cy;       // 바퀴 표면을 따라 부드럽게 실어나름
+  m.vx+=-wh.spin*ry*WHEEL_KICK;
+  m.vy+= wh.spin*rx*WHEEL_KICK;
+}
+function resolveWheel(m,wh){
+  const step=Math.PI*2/wh.arms, dir=wh.spin>=0?1:-1;
+  for(let i=0;i<wh.arms;i++){
+    const a=wh.ang+i*step, ca=Math.cos(a), sa=Math.sin(a);
+    const ix=wh.cx+ca*wh.rin, iy=wh.cy+sa*wh.rin;
+    const ox=wh.cx+ca*wh.R,  oy=wh.cy+sa*wh.R;
+    applyWheelKick(m, resolveCapsule(m,ix,iy,ox,oy,wh.halfw), wh);        // 살(라디얼)
+    applyWheelKick(m, resolveCapsule(m,ox,oy,ox-sa*wh.lip*dir,oy+ca*wh.lip*dir,wh.halfw), wh); // 양동이 입술
+  }
+}
+
+function physicsStep(){
+  for(const sp of spinners) sp.ang+=sp.spin;
+  for(const wh of wheels) wh.ang+=wh.spin;
+  for(const m of active){
+    m.vy+=GRAV;
+    m.vx+=rand(-0.02,0.02);
+    m.vx*=DAMP; m.vy*=DAMP;     // 속도 감쇠 → 통통 튐이 잦아들며 부드럽게
+    m.vx=clamp(m.vx,-VMAX,VMAX); m.vy=clamp(m.vy,-VMAX,VMAX);
+    m.x+=m.vx; m.y+=m.vy;
+
+    if(m.x<m.r){ m.x=m.r; m.vx=Math.abs(m.vx)*REST+rand(0,.3); }
+    if(m.x>W-m.r){ m.x=W-m.r; m.vx=-Math.abs(m.vx)*REST-rand(0,.3); }
+
+    for(const o of obstacles){ if(o.type==='peg') resolvePeg(m,o); else resolveWall(m,o); }
+    for(const sp of spinners) resolveSpinner(m,sp);
+    for(const wh of wheels) resolveWheel(m,wh);
+
+    if(m.y>m.maxY+0.4){ m.maxY=m.y; m.stuck=0; }
+    else { m.stuck++; if(m.stuck>90){ m.vx+=rand(-2.5,2.5); m.vy+=rand(1,2.5); m.stuck=0; } }
+
+    m.trail.push(m.x,m.y);
+    if(m.trail.length>16) m.trail.splice(0,2);
+  }
+
+  for(let a=0;a<active.length;a++) for(let b=a+1;b<active.length;b++){
+    const A=active[a],B=active[b];
+    const dx=B.x-A.x, dy=B.y-A.y, minD=A.r+B.r, d2=dx*dx+dy*dy;
+    if(d2<minD*minD){
+      const d=Math.sqrt(d2)||0.0001, nx=dx/d, ny=dy/d, pen=(minD-d)/2;
+      A.x-=nx*pen; A.y-=ny*pen; B.x+=nx*pen; B.y+=ny*pen;
+      const rvn=(B.vx-A.vx)*nx+(B.vy-A.vy)*ny;
+      if(rvn<0){ const imp=-(1+REST)*rvn/2; A.vx-=imp*nx; A.vy-=imp*ny; B.vx+=imp*nx; B.vy+=imp*ny; }
+    }
+  }
+
+  for(let k=active.length-1;k>=0;k--){
+    const m=active[k];
+    if(m.y-m.r>=finishY){
+      m.finished=true; m.place=finished.length+1; finished.push(m);
+      active.splice(k,1); onMarbleFinish(m);
+    }
+  }
+}
+
+function forceFinishRemaining(){
+  active.sort((a,b)=>b.y-a.y);
+  while(active.length){ const m=active.shift(); m.finished=true; m.place=finished.length+1; finished.push(m); }
+}
+
+/* =========================================================================
+   렌더링 (카메라 = 선두 추적)
+   ========================================================================= */
+function fitCanvas(){
+  dpr=window.devicePixelRatio||1;
+  const cssW=cv.clientWidth, cssH=cv.clientHeight;
+  cv.width=Math.round(cssW*dpr); cv.height=Math.round(cssH*dpr);
+  scale=(cssW/W)*dpr;
+}
+window.addEventListener("resize", ()=>{ if(running) fitCanvas(); });
+
+function draw(){
+  const viewH=cv.height/scale;
+  if(active.length){
+    let lead=-1e9; for(const m of active) if(m.y>lead) lead=m.y;
+    let target=clamp(lead-viewH*0.58, 0, Math.max(0,courseHeight-viewH));
+    cameraY+=(target-cameraY)*0.085;   // 부드러운 카메라 추적
+  }
+
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const bg=ctx.createLinearGradient(0,0,0,cv.height);
+  bg.addColorStop(0,"#0c1030"); bg.addColorStop(1,"#070a1c");
+  ctx.fillStyle=bg; ctx.fillRect(0,0,cv.width,cv.height);
+
+  ctx.setTransform(scale,0,0,scale,0,-cameraY*scale);
+  const vTop=cameraY-20, vBot=cameraY+viewH+20;
+
+  drawObstacles(vTop,vBot);
+
+  if(finishY>vTop && finishY<vBot+60){
+    const sq=14;
+    for(let x=0;x<W;x+=sq){ ctx.fillStyle=((Math.floor(x/sq))%2)?"#ffffff":"#222"; ctx.fillRect(x,finishY,sq,sq); }
+    ctx.fillStyle="rgba(255,210,74,.12)"; ctx.fillRect(0,finishY,W,courseHeight-finishY);
+  }
+
+  for(const m of active){
+    if(m.trail.length>=4){
+      ctx.strokeStyle=m.color; ctx.globalAlpha=.25; ctx.lineWidth=m.r*1.1; ctx.lineCap="round";
+      ctx.beginPath(); ctx.moveTo(m.trail[0],m.trail[1]);
+      for(let t=2;t<m.trail.length;t+=2) ctx.lineTo(m.trail[t],m.trail[t+1]);
+      ctx.stroke(); ctx.globalAlpha=1;
+    }
+    ctx.beginPath(); ctx.arc(m.x,m.y,m.r,0,7); ctx.fillStyle=m.color; ctx.fill();
+    ctx.lineWidth=2.5; ctx.strokeStyle="rgba(255,255,255,.85)"; ctx.stroke();
+    ctx.beginPath(); ctx.arc(m.x-m.r*0.3,m.y-m.r*0.3,m.r*0.32,0,7); ctx.fillStyle="rgba(255,255,255,.55)"; ctx.fill();
+    drawLabel(m);
+  }
+}
+function drawObstacles(vTop,vBot){
+  for(const o of obstacles){
+    if(o.type==='peg'){
+      if(o.y<vTop||o.y>vBot) continue;
+      ctx.fillStyle = o.r>9 ? "#6b5bd6" : "#3a4280";
+      ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,7); ctx.fill();
+    } else {
+      if(Math.min(o.y1,o.y2)>vBot || Math.max(o.y1,o.y2)<vTop) continue;
+      ctx.strokeStyle="#8a73e0"; ctx.lineCap="round"; ctx.lineWidth=o.thick*2;
+      ctx.beginPath(); ctx.moveTo(o.x1,o.y1); ctx.lineTo(o.x2,o.y2); ctx.stroke();
+    }
+  }
+  for(const sp of spinners){
+    if(sp.cy<vTop-sp.len || sp.cy>vBot+sp.len) continue;
+    ctx.strokeStyle="#ff8a5c"; ctx.lineCap="round"; ctx.lineWidth=sp.halfw*2;
+    for(let a=0;a<sp.arms;a++){
+      const ang=sp.ang+a*(Math.PI*2/sp.arms);
+      ctx.beginPath(); ctx.moveTo(sp.cx,sp.cy);
+      ctx.lineTo(sp.cx+Math.cos(ang)*sp.len, sp.cy+Math.sin(ang)*sp.len); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(sp.cx,sp.cy,sp.halfw+2,0,7); ctx.fillStyle="#ffd24a"; ctx.fill();
+  }
+  for(const wh of wheels){
+    if(wh.cy<vTop-wh.R || wh.cy>vBot+wh.R) continue;
+    const step=Math.PI*2/wh.arms, dir=wh.spin>=0?1:-1;
+    ctx.globalAlpha=.3; ctx.lineWidth=4; ctx.strokeStyle="#d98a3a";  // 림(테두리, 장식)
+    ctx.beginPath(); ctx.arc(wh.cx,wh.cy,wh.R,0,7); ctx.stroke(); ctx.globalAlpha=1;
+    ctx.strokeStyle="#ffb15c"; ctx.lineCap="round"; ctx.lineWidth=wh.halfw*2;
+    for(let i=0;i<wh.arms;i++){
+      const a=wh.ang+i*step, ca=Math.cos(a), sa=Math.sin(a);
+      const ix=wh.cx+ca*wh.rin, iy=wh.cy+sa*wh.rin, ox=wh.cx+ca*wh.R, oy=wh.cy+sa*wh.R;
+      ctx.beginPath(); ctx.moveTo(ix,iy); ctx.lineTo(ox,oy);
+      ctx.lineTo(ox-sa*wh.lip*dir, oy+ca*wh.lip*dir); ctx.stroke();  // 살 + 양동이 입술
+    }
+    ctx.beginPath(); ctx.arc(wh.cx,wh.cy,wh.rin,0,7); ctx.fillStyle="#ffd24a"; ctx.fill();
+  }
+}
+function drawLabel(m){
+  const fw=17*dpr/scale;                 // 화면상 약 17px로 고정(데스크톱/모바일/확대 무관)
+  ctx.save();
+  ctx.font=`700 ${fw}px 'Apple SD Gothic Neo','Malgun Gothic',sans-serif`;
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  const padX=fw*0.5, h=fw*1.55;
+  const tw=ctx.measureText(m.name).width+padX*2, ly=m.y-m.r-h*0.7;
+  ctx.fillStyle="rgba(0,0,0,.62)"; roundRect(m.x-tw/2, ly-h/2, tw, h, h*0.32); ctx.fill();
+  ctx.fillStyle="#fff"; ctx.fillText(m.name, m.x, ly);
+  ctx.restore();
+}
+function roundRect(x,y,w,h,r){
+  ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+  ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+}
+
+/* =========================================================================
+   순위 패널
+   ========================================================================= */
+const MEDALS=['🥇','🥈','🥉'];
+function renderStandings(){
+  if(!marbles.length){ standList.innerHTML=''; return; }
+  // 새 레이스면 행을 한 번만 생성(이후 재사용 → 부드러운 슬라이드 가능)
+  if(!marbles[0].row){
+    standList.innerHTML='';
+    for(const m of marbles){
+      const el=document.createElement('div');
+      el.className='srow run';
+      el.innerHTML=`<span class="dot"></span><span class="nm"></span><span class="pos"></span>`;
+      el.querySelector('.dot').style.background=m.color;
+      el.querySelector('.nm').textContent=m.name;
+      m.row=el; m.shownRank=null; m.arrow=0; m.arrowTtl=0;
+      standList.appendChild(el);
+    }
+  }
+  const order=finished.concat(active.slice().sort((a,b)=>b.y-a.y));   // 현재 위치 기준 실시간 순위
+
+  // FLIP 1) 이동 전 화면상 위치 기록
+  const first=new Map();
+  for(const m of order) first.set(m, m.row.getBoundingClientRect().top);
+
+  // 내용 갱신 + 순서대로 재배치(변형 초기화)
+  order.forEach((m,idx)=>{
+    const el=m.row; el.style.transition='none'; el.style.transform='';
+    const rank=idx+1;
+    const medal = rank<=3 ? MEDALS[rank-1]+' ' : '';
+    if(m.finished){
+      el.className='srow fin';
+      el.querySelector('.pos').innerHTML=`${medal}${m.place}등 도착`;
+    }else{
+      el.className='srow run';
+      if(m.shownRank!=null){
+        if(rank<m.shownRank){ m.arrow=1; m.arrowTtl=8; }
+        else if(rank>m.shownRank){ m.arrow=-1; m.arrowTtl=8; }
+      }
+      m.shownRank=rank;
+      if(m.arrowTtl>0) m.arrowTtl--; else m.arrow=0;
+      const arr=m.arrow>0?' <span class="up">▲</span>':(m.arrow<0?' <span class="down">▼</span>':'');
+      el.querySelector('.pos').innerHTML=`${medal}현재 ${rank}위${arr}`;
+    }
+    standList.appendChild(el);
+  });
+
+  // FLIP 2) 새 위치 측정 후 옛 위치로 되돌려 두기(Invert)
+  standList.offsetHeight;
+  for(const m of order){
+    const el=m.row, dy=first.get(m)-el.getBoundingClientRect().top;
+    if(Math.abs(dy)>0.5){ el.style.transition='none'; el.style.transform=`translateY(${dy}px)`; }
+  }
+  // FLIP 3) 제자리로 슬라이드(Play)
+  standList.offsetHeight;
+  for(const m of order){
+    const el=m.row;
+    if(el.style.transform){ el.style.transition='transform .3s cubic-bezier(.2,.7,.3,1)'; el.style.transform=''; }
+  }
+}
+
+/* =========================================================================
+   결과
+   ========================================================================= */
+function finishRace(){
+  running=false; cancelAnimationFrame(rafId);
+  renderStandings();
+  const total=finished.length;
+  const losers=finished.slice(total-winnerCount);
+
+  $("#resTitle").textContent="🏁 레이스 종료!";
+  $("#resBet").textContent=`당첨(마지막 ${winnerCount}명) → ${betLabel}!`;
+
+  $("#winners").innerHTML=losers.map(m=>
+    `<div class="winner"><div class="wdot" style="background:${m.color}"></div>
+      <div class="wn">${esc(m.name)}</div><div class="wp">${m.place}등 / ${total}명 중</div></div>`).join("");
+
+  $("#fullRank").innerHTML=finished.map(m=>{
+    const isLoser=m.place>total-winnerCount;
+    return `<div class="srow ${isLoser?'fin':''}"><span class="dot" style="background:${m.color}"></span>
+      <span class="nm">${esc(m.name)}</span><span class="pos">${m.place}등${isLoser?' ☕':''}</span></div>`;
+  }).join("");
+
+  showSection("result");
+  setCaster(localLine("final",{losers:losers.map(m=>m.name)}));
+}
+
+/* =========================================================================
+   내장 실시간 중계 (템플릿 기반)
+   ========================================================================= */
+let lastCommentTs=0, pendingFinish=[];
+const COMMENT_INTERVAL=2000;
+
+function resetCaster(names){
+  lastCommentTs=0; pendingFinish=[];
+  setCaster(localLine("intro",{names}));
+}
+function onMarbleFinish(m){ pendingFinish.push(m.name); renderStandings(); }
+
+function maybeComment(){
+  const now=performance.now();
+  if(pendingFinish.length){ setCaster(localLine("finish",{just:pendingFinish.slice()})); pendingFinish=[]; lastCommentTs=now; return; }
+  if(now-lastCommentTs<COMMENT_INTERVAL) return;
+  if(active.length===0) return;
+  lastCommentTs=now;
+  setCaster(localLine("mid",{}));
+}
+
+function buildState(){
+  const inProg=active.slice().sort((a,b)=>b.y-a.y);
+  return {
+    leader: inProg.length?inProg[0].name:"-",
+    last: inProg.length?inProg[inProg.length-1].name:"-",
+    done: finished.length, total: marbles.length
+  };
+}
+const pick=(arr)=>arr[Math.floor(Math.random()*arr.length)];
+
+function localLine(phase, extra){
+  const st=buildState();
+  if(phase==="intro") return pick([
+    `자, ${extra.names.length}명의 선수들 출발합니다! 🏁`,
+    `과연 누가 ${betLabel} 당첨자가 될까요?`,
+    `긴장되는 순간, 구슬들이 굴러갑니다!`,
+    `${extra.names.length}명의 운명을 건 레이스, 스타트!`]);
+  if(phase==="finish") return pick([
+    `${extra.just[0]} 선수 결승선 통과! 🎉`,
+    `${extra.just.join(", ")} 무사히 도착했습니다!`,
+    `${extra.just[0]}, 한고비 넘겼네요!`,
+    `${extra.just[0]} 골인! 당첨권에서 벗어났습니다!`]);
+  if(phase==="final") return pick([
+    `최종 ${betLabel} 당첨: ${extra.losers.join(", ")}! ☕`,
+    `오늘의 주인공은 ${extra.losers.join(", ")} 입니다!`,
+    `${extra.losers.join(", ")}, ${betLabel} 부탁드립니다! 😆`,
+    `${extra.losers.join(", ")} 선수, 오늘은 운이 따라주지 않았네요!`]);
+  return pick([
+    `선두는 ${st.leader}! 막판 뒤집기 가능할까요?`,
+    `${st.last} 선수, 분발이 필요합니다! 💦`,
+    `치열한 접전, ${st.leader}가 앞서갑니다!`,
+    `${st.done}명 도착, 남은 선수들 힘내세요!`,
+    `${st.last}, 위험합니다! 당첨권에 걸렸어요!`,
+    `구슬들이 사정없이 튕깁니다, 예측 불가!`]);
+}
+
+function setCaster(text){ casterLine.textContent=text; }
+
+showSection("setup");
+</script>
+</body>
+</html>
