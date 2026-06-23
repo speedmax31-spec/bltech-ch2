@@ -108,6 +108,9 @@ button{font-family:var(--sans);cursor:pointer}
 .person-hd{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:700;margin-bottom:12px}
 .person-no{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:7px;background:var(--teal);color:#04110f;font-size:12px;font-weight:700}
 .person-cnt{margin-left:auto;font-size:11px;font-weight:500;color:var(--ink-faint)}
+.bgroup{display:flex;flex-direction:column;gap:14px}
+.grp-label{font-size:14px;font-weight:700;color:var(--ink);margin:4px 2px 0;display:flex;align-items:center;gap:8px}
+.grp-cnt{font-size:11px;font-weight:500;color:var(--ink-faint)}
 .col{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:12px;min-height:140px}
 .col.drag-over{border-color:var(--teal);background:var(--mint)}
 .col-head{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 12px}
@@ -503,7 +506,6 @@ footer b{color:var(--ink-soft)}
       <span class="filter-tag" id="filterTag" style="display:none"></span>
       <div class="spacer"></div>
     </div>
-    <div class="owner-menu" id="ownerMenu"></div>
     <div class="board" id="board"></div>
   </div>
 
@@ -1030,15 +1032,7 @@ function renderProjLegend(){
   g.querySelectorAll('.plg-name').forEach(el=>el.onclick=()=>{const id=el.closest('.plg').dataset.pid;filterProj=filterProj===id?null:id;renderAll();});
   g.querySelectorAll('.plg-date').forEach(inp=>inp.onchange=()=>{const p=projById(inp.dataset.pid);if(p){p.date=inp.value;save();renderCalendar();renderProjLegend();}});
 }
-function renderOwnerMenu(){
-  const g=document.getElementById('ownerMenu'); if(!g)return;
-  const open=DB.tasks.filter(x=>x.status!=='done');
-  const cnt=o=>o==='전체'?open.length:o==='공용'?open.filter(x=>ownerOf(x)==='공용').length:open.filter(x=>ownerOf(x)!=='공용').length;
-  const chip=(o,label)=>`<span class="own-chip${ownerFilter===o?' active':''}" data-o="${o}">${label} <b>${cnt(o)}</b></span>`;
-  g.innerHTML=`${chip('전체','전체')}${chip('공용','공용 할일')}${chip('개인','개인 할일')}`;
-  g.querySelectorAll('.own-chip').forEach(c=>c.onclick=()=>{ownerFilter=c.dataset.o;renderAll();});
-}
-function renderProjects(){ renderCalendar(); renderProjLegend(); renderOwnerMenu(); }
+function renderProjects(){ renderCalendar(); renderProjLegend(); }
 function buildCols(host,tasks,t,ownerToSet){
   COLS.forEach(c=>{
     const col=document.createElement('div');col.className='col';col.dataset.col=c.id;
@@ -1058,28 +1052,34 @@ function renderBoard(){
   const board=document.getElementById('board');board.innerHTML='';
   const t=todayStr();
   const baseF=x=>(!filterProj||x.proj===filterProj);
-  const ot=ownerFilter==='전체'?'전체 할 일':ownerFilter==='공용'?'공용 할일':'개인 할일';
-  document.getElementById('boardTitle').textContent=filterProj?projById(filterProj).name+' · '+ot:ot;
+  document.getElementById('boardTitle').textContent=filterProj?projById(filterProj).name:'업무 보드';
   const ft=document.getElementById('filterTag');
   if(filterProj){ft.style.display='inline-flex';ft.innerHTML=`필터 <b>${esc(projById(filterProj).name)}</b><button title="해제">✕</button>`;
     ft.querySelector('button').onclick=()=>{filterProj=null;renderAll();};}
   else ft.style.display='none';
-  if(ownerFilter==='개인'){
-    ['차훈','마대희','이민환'].forEach((person,i)=>{
-      const ptasks=DB.tasks.filter(x=>baseF(x)&&ownerOf(x)===person);
-      const open=ptasks.filter(x=>x.status!=='done').length;
-      const sec=document.createElement('div');sec.className='person-sec';
-      sec.innerHTML=`<div class="person-hd"><span class="person-no">${i+1}</span>${person}<span class="person-cnt">미완료 ${open} · 전체 ${ptasks.length}</span></div>`;
-      const cols=document.createElement('div');cols.className='board-cols';
-      buildCols(cols,ptasks,t,person);
-      sec.appendChild(cols); board.appendChild(sec);
-    });
-  } else {
-    const tasks=DB.tasks.filter(x=>baseF(x)&&(ownerFilter==='전체'||ownerOf(x)===ownerFilter));
+
+  // 공용 업무 (한 보드)
+  const pub=DB.tasks.filter(x=>baseF(x)&&ownerOf(x)==='공용');
+  const gPub=document.createElement('div');gPub.className='bgroup';
+  gPub.innerHTML=`<div class="grp-label">공용 업무 <span class="grp-cnt">미완료 ${pub.filter(x=>x.status!=='done').length} · 전체 ${pub.length}</span></div>`;
+  const pubBox=document.createElement('div');pubBox.className='person-sec';
+  const pubCols=document.createElement('div');pubCols.className='board-cols';
+  buildCols(pubCols,pub,t,'공용');
+  pubBox.appendChild(pubCols);gPub.appendChild(pubBox);board.appendChild(gPub);
+
+  // 개인 업무 (차훈·마대희·이민환 각자 보드)
+  const gPer=document.createElement('div');gPer.className='bgroup';
+  gPer.innerHTML=`<div class="grp-label">개인 업무</div>`;
+  ['차훈','마대희','이민환'].forEach((person,i)=>{
+    const ptasks=DB.tasks.filter(x=>baseF(x)&&ownerOf(x)===person);
+    const open=ptasks.filter(x=>x.status!=='done').length;
+    const sec=document.createElement('div');sec.className='person-sec';
+    sec.innerHTML=`<div class="person-hd"><span class="person-no">${i+1}</span>${person}<span class="person-cnt">미완료 ${open} · 전체 ${ptasks.length}</span></div>`;
     const cols=document.createElement('div');cols.className='board-cols';
-    buildCols(cols,tasks,t,ownerFilter==='공용'?'공용':null);
-    board.appendChild(cols);
-  }
+    buildCols(cols,ptasks,t,person);
+    sec.appendChild(cols);gPer.appendChild(sec);
+  });
+  board.appendChild(gPer);
 }
 function cardEl(x,t){
   const p=projById(x.proj)||{name:'미지정',color:'var(--ink-soft)',hint:'?'};
