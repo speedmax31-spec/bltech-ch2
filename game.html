@@ -7,22 +7,22 @@
 <title>☕ 커피 내기 구슬 레이스</title>
 <style>
   :root{
-    --bg:#0f1226; --bg2:#161a3a; --panel:#1d2350; --panel2:#252c66;
-    --line:#343c7d; --text:#eef1ff; --muted:#9aa3d8; --accent:#ffd24a;
-    --accent2:#7c8bff; --good:#46e08a; --bad:#ff6b8b; --shadow:rgba(0,0,0,.35);
+    --bg:#000000; --bg2:#0c0c0e; --panel:#121214; --panel2:#1A1B1E;
+    --line:#26272B; --text:#F1F3F1; --muted:#A7AFA8; --accent:#14B8A6;
+    --accent2:#5EEAD4; --good:#3BD68F; --bad:#F06B5E; --shadow:rgba(0,0,0,.45);
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{
     font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Segoe UI",system-ui,sans-serif;
-    background:radial-gradient(1200px 600px at 50% -10%, #20275e 0%, var(--bg) 60%);
+    background:radial-gradient(1200px 600px at 50% -10%, #0c1f1c 0%, var(--bg) 60%);
     color:var(--text); -webkit-font-smoothing:antialiased; -webkit-text-size-adjust:100%;
   }
   .wrap{max-width:980px;margin:0 auto;padding:16px 14px calc(34px + env(safe-area-inset-bottom))}
   header.top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
   header.top h1{font-size:21px;margin:0;letter-spacing:-.5px}
   header.top .sub{color:var(--muted);font-size:12.5px}
-  .badge{background:var(--accent);color:#241c00;font-weight:800;border-radius:999px;
+  .badge{background:var(--accent);color:#04110f;font-weight:800;border-radius:999px;
     padding:4px 10px;font-size:12px;flex:0 0 auto}
 
   .card{background:linear-gradient(180deg,var(--panel),var(--bg2));
@@ -32,7 +32,7 @@
 
   label{display:block;font-size:13px;color:var(--muted);margin:0 0 6px}
   textarea,input[type=text],select{
-    width:100%;background:#11163a;border:1px solid var(--line);color:var(--text);
+    width:100%;background:#16171A;border:1px solid var(--line);color:var(--text);
     border-radius:10px;padding:11px 12px;font-size:16px;outline:none;font-family:inherit}
   textarea{min-height:150px;resize:vertical;line-height:1.55}
   textarea:focus,input:focus,select:focus{border-color:var(--accent2)}
@@ -46,43 +46,43 @@
 
   .modes{display:flex;gap:8px;margin-top:4px}
   .mode{flex:1;text-align:center;border:1px solid var(--line);border-radius:12px;
-    padding:13px 6px;cursor:pointer;background:#11163a;transition:.15s;user-select:none;
+    padding:13px 6px;cursor:pointer;background:#16171A;transition:.15s;user-select:none;
     -webkit-tap-highlight-color:transparent}
   .mode b{display:block;font-size:18px}
   .mode small{color:var(--muted);font-size:11.5px}
-  .mode.sel{border-color:var(--accent);background:#2a2406;box-shadow:0 0 0 2px rgba(255,210,74,.25) inset}
-  .mode.sel small{color:#ffe9a3}
+  .mode.sel{border-color:var(--accent);background:#0e1f1c;box-shadow:0 0 0 2px rgba(20,184,166,.30) inset}
+  .mode.sel small{color:#5EEAD4}
 
   .btn{appearance:none;border:0;border-radius:12px;padding:13px 18px;font-size:16px;
     font-weight:800;cursor:pointer;transition:.12s;font-family:inherit;touch-action:manipulation;
     -webkit-tap-highlight-color:transparent}
   .btn:active{transform:translateY(1px)}
-  .btn.primary{background:linear-gradient(180deg,#ffe07a,var(--accent));color:#241c00}
-  .btn.ghost{background:#222a63;color:var(--text);border:1px solid var(--line)}
+  .btn.primary{background:linear-gradient(180deg,#5EEAD4,var(--accent));color:#04110f}
+  .btn.ghost{background:#1A1B1E;color:var(--text);border:1px solid var(--line)}
   .btn.lg{width:100%;padding:16px;font-size:18px}
 
   /* ===== GAME ===== */
   #game{display:none}
   .stage{display:flex;flex-direction:column;gap:12px}
-  .canvas-box{background:#0a0d22;border:1px solid var(--line);border-radius:16px;overflow:hidden;position:relative}
+  .canvas-box{background:#000000;border:1px solid var(--line);border-radius:16px;overflow:hidden;position:relative}
   canvas{display:block;width:100%;height:54vh;min-height:320px}
   .side{display:flex;flex-direction:column;gap:12px;min-height:0}
 
-  .caster{background:linear-gradient(180deg,#241b45,#1a1436);border:1px solid #4a3a86;
+  .caster{background:linear-gradient(180deg,#16171A,#101012);border:1px solid #26272B;
     border-radius:14px;padding:11px 13px}
-  .caster .tag{font-size:11px;color:#caa6ff;font-weight:800;letter-spacing:1px}
+  .caster .tag{font-size:11px;color:#5EEAD4;font-weight:800;letter-spacing:1px}
   .caster .line{font-size:15.5px;line-height:1.45;margin-top:4px;min-height:23px}
 
-  .standings{background:#11163a;border:1px solid var(--line);border-radius:14px;
+  .standings{background:#16171A;border:1px solid var(--line);border-radius:14px;
     padding:8px;max-height:32vh;overflow:auto}
   .standings h3{margin:2px 4px 6px;font-size:12.5px;color:var(--muted)}
   .srow{display:flex;align-items:center;gap:8px;padding:6px;border-radius:8px;font-size:14px}
   .srow .dot{width:14px;height:14px;border-radius:50%;flex:0 0 auto;border:2px solid #fff3}
   .srow .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .srow .pos{color:var(--muted);font-variant-numeric:tabular-nums;font-size:12px;flex:0 0 auto}
-  .srow.fin{background:#0f3324}
+  .srow.fin{background:#0e2a20}
   .srow.fin .pos{color:var(--good);font-weight:800}
-  .srow.run .pos{color:#cdd4ff;font-weight:700}
+  .srow.run .pos{color:#A7AFA8;font-weight:700}
   .srow.run{transition:background .2s}
   .srow .pos .up{color:var(--good);font-size:11px}
   .srow .pos .down{color:var(--bad);font-size:11px}
@@ -107,11 +107,11 @@
   .result-card .crown{font-size:40px}
   .result-card h2{margin:6px 0 2px;font-size:22px}
   .winners{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:16px 0}
-  .winner{background:linear-gradient(180deg,#3a2a06,#2a2105);border:2px solid var(--accent);
+  .winner{background:linear-gradient(180deg,#10241f,#0c1a17);border:2px solid var(--accent);
     border-radius:14px;padding:14px 18px;min-width:108px;flex:0 1 auto}
   .winner .wdot{width:22px;height:22px;border-radius:50%;margin:0 auto 6px;border:2px solid #fff}
   .winner .wn{font-size:18px;font-weight:800}
-  .winner .wp{color:#ffe9a3;font-size:12px;margin-top:2px}
+  .winner .wp{color:#5EEAD4;font-size:12px;margin-top:2px}
   .full-rank{text-align:left;max-width:420px;margin:14px auto 0}
   .full-rank .srow{font-size:13.5px}
   .res-actions{margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
@@ -554,7 +554,7 @@ function draw(){
   ctx.setTransform(1,0,0,1,0,0);
   ctx.clearRect(0,0,cv.width,cv.height);
   const bg=ctx.createLinearGradient(0,0,0,cv.height);
-  bg.addColorStop(0,"#0c1030"); bg.addColorStop(1,"#070a1c");
+  bg.addColorStop(0,"#0c0c0e"); bg.addColorStop(1,"#050506");
   ctx.fillStyle=bg; ctx.fillRect(0,0,cv.width,cv.height);
 
   ctx.setTransform(scale,0,0,scale,0,-cameraY*scale);
@@ -565,7 +565,7 @@ function draw(){
   if(finishY>vTop && finishY<vBot+60){
     const sq=14;
     for(let x=0;x<W;x+=sq){ ctx.fillStyle=((Math.floor(x/sq))%2)?"#ffffff":"#222"; ctx.fillRect(x,finishY,sq,sq); }
-    ctx.fillStyle="rgba(255,210,74,.12)"; ctx.fillRect(0,finishY,W,courseHeight-finishY);
+    ctx.fillStyle="rgba(20,184,166,.12)"; ctx.fillRect(0,finishY,W,courseHeight-finishY);
   }
 
   for(const m of active){
@@ -585,37 +585,37 @@ function drawObstacles(vTop,vBot){
   for(const o of obstacles){
     if(o.type==='peg'){
       if(o.y<vTop||o.y>vBot) continue;
-      ctx.fillStyle = o.r>9 ? "#6b5bd6" : "#3a4280";
+      ctx.fillStyle = o.r>9 ? "#5A9BD8" : "#2c3a4d";
       ctx.beginPath(); ctx.arc(o.x,o.y,o.r,0,7); ctx.fill();
     } else {
       if(Math.min(o.y1,o.y2)>vBot || Math.max(o.y1,o.y2)<vTop) continue;
-      ctx.strokeStyle="#8a73e0"; ctx.lineCap="round"; ctx.lineWidth=o.thick*2;
+      ctx.strokeStyle="#5A9BD8"; ctx.lineCap="round"; ctx.lineWidth=o.thick*2;
       ctx.beginPath(); ctx.moveTo(o.x1,o.y1); ctx.lineTo(o.x2,o.y2); ctx.stroke();
     }
   }
   for(const sp of spinners){
     if(sp.cy<vTop-sp.len || sp.cy>vBot+sp.len) continue;
-    ctx.strokeStyle="#ff8a5c"; ctx.lineCap="round"; ctx.lineWidth=sp.halfw*2;
+    ctx.strokeStyle="#D08A4A"; ctx.lineCap="round"; ctx.lineWidth=sp.halfw*2;
     for(let a=0;a<sp.arms;a++){
       const ang=sp.ang+a*(Math.PI*2/sp.arms);
       ctx.beginPath(); ctx.moveTo(sp.cx,sp.cy);
       ctx.lineTo(sp.cx+Math.cos(ang)*sp.len, sp.cy+Math.sin(ang)*sp.len); ctx.stroke();
     }
-    ctx.beginPath(); ctx.arc(sp.cx,sp.cy,sp.halfw+2,0,7); ctx.fillStyle="#ffd24a"; ctx.fill();
+    ctx.beginPath(); ctx.arc(sp.cx,sp.cy,sp.halfw+2,0,7); ctx.fillStyle="#14B8A6"; ctx.fill();
   }
   for(const wh of wheels){
     if(wh.cy<vTop-wh.R || wh.cy>vBot+wh.R) continue;
     const step=Math.PI*2/wh.arms, dir=wh.spin>=0?1:-1;
-    ctx.globalAlpha=.3; ctx.lineWidth=4; ctx.strokeStyle="#d98a3a";  // 림(테두리, 장식)
+    ctx.globalAlpha=.3; ctx.lineWidth=4; ctx.strokeStyle="#D08A4A";  // 림(테두리, 장식)
     ctx.beginPath(); ctx.arc(wh.cx,wh.cy,wh.R,0,7); ctx.stroke(); ctx.globalAlpha=1;
-    ctx.strokeStyle="#ffb15c"; ctx.lineCap="round"; ctx.lineWidth=wh.halfw*2;
+    ctx.strokeStyle="#F0B429"; ctx.lineCap="round"; ctx.lineWidth=wh.halfw*2;
     for(let i=0;i<wh.arms;i++){
       const a=wh.ang+i*step, ca=Math.cos(a), sa=Math.sin(a);
       const ix=wh.cx+ca*wh.rin, iy=wh.cy+sa*wh.rin, ox=wh.cx+ca*wh.R, oy=wh.cy+sa*wh.R;
       ctx.beginPath(); ctx.moveTo(ix,iy); ctx.lineTo(ox,oy);
       ctx.lineTo(ox-sa*wh.lip*dir, oy+ca*wh.lip*dir); ctx.stroke();  // 살 + 양동이 입술
     }
-    ctx.beginPath(); ctx.arc(wh.cx,wh.cy,wh.rin,0,7); ctx.fillStyle="#ffd24a"; ctx.fill();
+    ctx.beginPath(); ctx.arc(wh.cx,wh.cy,wh.rin,0,7); ctx.fillStyle="#14B8A6"; ctx.fill();
   }
 }
 function drawLabel(m){
