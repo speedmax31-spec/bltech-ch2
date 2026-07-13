@@ -124,6 +124,19 @@ button{font-family:var(--sans);cursor:pointer}
 .embed-empty-ic{font-size:42px;color:var(--teal)}
 .embed-empty-t{font-size:16px;font-weight:700}
 .embed-empty-d{font-size:13px;color:var(--ink-faint);line-height:1.7}
+/* 오른쪽 챗봇 도크 */
+.cb-toggle{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:58;display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:var(--teal);color:#04110f;border:0;border-radius:12px 0 0 12px;padding:12px 7px;cursor:pointer;font-weight:700;font-size:11px;box-shadow:var(--shadow)}
+.cb-toggle i{font-size:20px}
+.cb-toggle.hidden{display:none}
+.cb-dock{position:fixed;top:0;right:0;height:100vh;width:390px;max-width:92vw;z-index:59;background:var(--panel);border-left:1px solid var(--line);
+  box-shadow:-10px 0 34px rgba(0,0,0,.5);transform:translateX(100%);transition:transform .25s ease;display:flex;flex-direction:column}
+.cb-dock.open{transform:translateX(0)}
+.cb-head{display:flex;align-items:center;gap:8px;padding:13px 15px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
+.cb-head i{color:var(--teal);font-size:18px}
+.cb-x{margin-left:auto;background:transparent;border:0;color:var(--ink-soft);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:6px}
+.cb-x:hover{color:var(--ink);background:var(--panel-2)}
+.cb-body{flex:1;border:0;border-radius:0;height:auto;min-height:0}
 /* 상단 탭 줄: 메인 탭(왼쪽) + 룰렛 게임(오른쪽 분리) */
 .topnav{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
 .topnav .viewswitch{margin-bottom:0}
@@ -505,7 +518,6 @@ footer b{color:var(--ink-soft)}
     <div class="viewswitch">
       <button class="vbtn active" id="vb-board" onclick="showView('board')"><i class="ti ti-layout-kanban"></i>개인 업무 보드</button>
       <button class="vbtn" id="vb-dash" onclick="showView('dash')"><i class="ti ti-layout-dashboard"></i>통합 운영 대시보드</button>
-      <button class="vbtn" id="vb-chatbot" onclick="showView('chatbot')"><i class="ti ti-message-chatbot"></i>BLTECH 챗봇</button>
     </div>
     <button class="vbtn game-solo" id="vb-game" onclick="showView('game')" title="취미 · 커피 내기 게임"><i class="ti ti-dice-5"></i>룰렛 게임</button>
   </div>
@@ -513,11 +525,6 @@ footer b{color:var(--ink-soft)}
   <!-- 룰렛 게임 -->
   <div class="view" id="view-game">
     <div class="embed-wrap"><iframe id="game-frame" class="embed-frame" src="game.html" title="룰렛 게임"></iframe></div>
-  </div>
-
-  <!-- BLTECH 챗봇 -->
-  <div class="view" id="view-chatbot">
-    <div class="embed-wrap" id="chatbot-host"></div>
   </div>
 
   <!-- 개인 업무 보드 -->
@@ -879,6 +886,13 @@ footer b{color:var(--ink-soft)}
 </footer>
 
 <!-- 할 일 모달 -->
+<!-- 오른쪽 챗봇 도크 (모든 화면 공통) -->
+<button id="cb-toggle" class="cb-toggle" onclick="toggleCbDock()" title="BLTECH 챗봇 열기"><i class="ti ti-message-chatbot"></i><span>챗봇</span></button>
+<div id="cb-dock" class="cb-dock">
+  <div class="cb-head"><i class="ti ti-message-chatbot"></i><span>BLTECH 챗봇</span><button class="cb-x" onclick="toggleCbDock()" title="닫기">✕</button></div>
+  <div class="embed-wrap cb-body" id="chatbot-host"></div>
+</div>
+
 <div class="scrim" id="scrim">
   <div class="modal">
     <h3 id="modalTitle">할 일 추가</h3>
@@ -953,6 +967,14 @@ function setChatbotUrl(){
   localStorage.setItem('bltech_chatbot_url',(v||'').trim());
   renderChatbot();
 }
+function toggleCbDock(){
+  const d=document.getElementById('cb-dock'); if(!d)return;
+  const open=d.classList.toggle('open');
+  const t=document.getElementById('cb-toggle'); if(t)t.classList.toggle('hidden',open);
+  try{localStorage.setItem('bltech_cb_open',open?'1':'0');}catch(e){}
+  if(open)renderChatbot();
+}
+(function(){try{if(localStorage.getItem('bltech_cb_open')==='1'){const d=document.getElementById('cb-dock');if(d){d.classList.add('open');const t=document.getElementById('cb-toggle');if(t)t.classList.add('hidden');renderChatbot();}}}catch(e){}})();
 function showTab(name){
   document.querySelectorAll('.dash .tab,.tab-content').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
