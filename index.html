@@ -761,6 +761,7 @@ footer b{color:var(--ink-soft)}
         </div>
         <div class="fin-actions">
           <button class="xlsx-btn" onclick="pickFinishedXlsx()"><i class="ti ti-file-upload"></i> 엑셀로 재고 갱신</button>
+          <button class="xlsx-btn" onclick="pickFinishedPhoto()"><i class="ti ti-camera"></i> 사진으로 갱신</button>
           <span class="xlsx-stat" id="fin-xlsx-stat"></span>
           <span class="date-pill"><i class="ti ti-calendar" aria-hidden="true"></i><span id="fin-today"></span> 기준</span>
         </div>
@@ -1591,6 +1592,46 @@ function uploadFinishedXlsx(file){
 function resetFinishedXlsx(){
   if(!finXlsxActive()){toast('엑셀 반영 내역이 없습니다');return;}
   if(confirm('엑셀로 갱신한 재고를 지우고 원래 데이터로 되돌릴까요?')){localStorage.removeItem('bltech_ovr_naesu');location.reload();}
+}
+
+/* ===== 사진 업로드 → AI 자동읽기 (챗봇 서버 /api/vision) ===== */
+function aiServerUrl(){return (localStorage.getItem('bltech_chatbot_url')||'').trim().replace(/\/+$/,'');}
+function pickFinishedPhoto(){
+  if(!aiServerUrl()){
+    if(confirm('사진 읽기는 BLTECH 챗봇 서버가 필요합니다.\n지금 서버 주소를 입력할까요? (예: http://localhost:3000)'))setChatbotUrl();
+    return;
+  }
+  let inp=document.getElementById('photo-fin');
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.id='photo-fin';inp.style.display='none';
+    inp.onchange=()=>{if(inp.files[0])uploadFinishedPhoto(inp.files[0]);inp.value='';};document.body.appendChild(inp);}
+  inp.click();
+}
+async function uploadFinishedPhoto(file){
+  const base=aiServerUrl(); if(!base)return;
+  if(file.size>15*1024*1024){toast('사진이 너무 큽니다 (15MB 이하)');return;}
+  toast('AI가 사진을 읽는 중… (수 초 소요)');
+  try{
+    const dataUrl=await new Promise((ok,no)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=no;r.readAsDataURL(file);});
+    const res=await fetch(base+'/api/vision',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image:dataUrl,target:'naesu'})});
+    const j=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(j.error||('HTTP '+res.status));
+    const rows=Array.isArray(j.rows)?j.rows:[];
+    if(!rows.length){toast('사진에서 재고 표를 찾지 못했습니다');return;}
+    let hit=0;const miss=[];
+    rows.forEach(x=>{
+      const code=String(x.code||'').trim().toUpperCase();
+      const r=NAESU.find(n=>String(n[5]).toUpperCase()===code);
+      if(!r){miss.push(code);return;}
+      if(x.cur!=null&&isFinite(+x.cur))r[6]=Math.round(+x.cur);
+      if(x.safe!=null&&isFinite(+x.safe))r[7]=Math.round(+x.safe);
+      r[8]=r[6]-r[7];hit++;
+    });
+    if(hit){try{localStorage.setItem('bltech_ovr_naesu',JSON.stringify(NAESU));}catch(e){}renderFinished();}
+    toast(`사진 반영: ${hit}개 SKU 갱신`+(miss.length?` · 코드 미일치 ${miss.length}건`:''));
+  }catch(e){
+    const hint=/Failed to fetch/i.test(e.message)?' — 챗봇 서버가 실행 중인지 확인하세요':'';
+    toast('사진 읽기 실패: '+e.message+hint);
+  }
 }
 
 function finToday(){
