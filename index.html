@@ -134,8 +134,12 @@ button{font-family:var(--sans);cursor:pointer}
 .cb-dock.open{transform:translateX(0)}
 .cb-head{display:flex;align-items:center;gap:8px;padding:13px 15px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
 .cb-head i{color:var(--teal);font-size:18px}
-.cb-x{margin-left:auto;background:transparent;border:0;color:var(--ink-soft);font-size:16px;cursor:pointer;padding:2px 6px;border-radius:6px}
-.cb-x:hover{color:var(--ink);background:var(--panel-2)}
+.cb-x{margin-left:auto;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer;padding:5px 11px;border-radius:8px;white-space:nowrap}
+.cb-x:hover{border-color:var(--teal);color:var(--teal)}
+.cb-collapse{position:absolute;left:-30px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:var(--teal);color:#04110f;border:0;border-radius:12px 0 0 12px;padding:12px 6px;cursor:pointer;font-weight:700;font-size:11px;box-shadow:var(--shadow)}
+.cb-collapse i{font-size:18px}
+.cb-collapse:hover{filter:brightness(1.1)}
 .cb-body{flex:1;border:0;border-radius:0;height:auto;min-height:0}
 /* 상단 탭 줄: 메인 탭(왼쪽) + 룰렛 게임(오른쪽 분리) */
 .topnav{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
@@ -909,7 +913,8 @@ footer b{color:var(--ink-soft)}
 <!-- 오른쪽 챗봇 도크 (모든 화면 공통) -->
 <button id="cb-toggle" class="cb-toggle" onclick="toggleCbDock()" title="BLTECH 챗봇 열기"><i class="ti ti-message-chatbot"></i><span>챗봇</span></button>
 <div id="cb-dock" class="cb-dock">
-  <div class="cb-head"><i class="ti ti-message-chatbot"></i><span>BLTECH 챗봇</span><button class="cb-x" onclick="toggleCbDock()" title="닫기">✕</button></div>
+  <button class="cb-collapse" onclick="toggleCbDock()" title="챗봇 접기"><i class="ti ti-chevron-right"></i><span>접기</span></button>
+  <div class="cb-head"><i class="ti ti-message-chatbot"></i><span>BLTECH 챗봇</span><button class="cb-x" onclick="toggleCbDock()" title="접기">접기 ✕</button></div>
   <div class="embed-wrap cb-body" id="chatbot-host"></div>
 </div>
 
@@ -1281,7 +1286,7 @@ document.getElementById('editSave').onclick=()=>{if(!editCtx)return;const d=coll
 document.getElementById('editDelete').onclick=()=>{if(!editCtx)return;editCtx.onDelete();closeEditor();save();rerenderDash();toast('삭제되었습니다');};
 document.getElementById('editCancel').onclick=closeEditor;
 document.getElementById('editScrim').addEventListener('click',e=>{if(e.target.id==='editScrim')closeEditor();});
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeEditor();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeEditor();const _d=document.getElementById('cb-dock');if(_d&&_d.classList.contains('open'))toggleCbDock();}});
 
 /* ===================== 대시보드 데이터 ===================== */
 const ORD_SC={'신규':'p-new','생산중':'p-prod','QC 검사':'p-qc','출하대기':'p-ship','완료':'p-done','지연':'p-late'};
