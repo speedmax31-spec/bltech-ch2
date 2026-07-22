@@ -1041,9 +1041,13 @@ function save(){
 let STORE, DB, D;
 
 /* ===================== 백업 / 복원 ===================== */
+const OVR_KEYS=['bltech_ovr_naesu','bltech_ovr_naesu_at','bltech_ovr_codes','bltech_ovr_codes_at','bltech_ovr_bom','bltech_ovr_bom_date','bltech_ovr_bom_at'];
 function exportData(){
   const d=new Date(),p=n=>String(n).padStart(2,'0');
-  const blob=new Blob([JSON.stringify(STORE,null,2)],{type:'application/json'});
+  const payload=JSON.parse(JSON.stringify(STORE));
+  payload.__uploads={};
+  OVR_KEYS.forEach(k=>{try{const v=localStorage.getItem(k);if(v)payload.__uploads[k]=v;}catch(e){}});
+  const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
   const a=document.createElement('a');
   a.download=`BLTech_board_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.json`;
   a.href=URL.createObjectURL(blob);a.click();URL.revokeObjectURL(a.href);
@@ -1054,8 +1058,13 @@ function importData(file){
   r.onload=()=>{try{
     const o=JSON.parse(r.result);
     if(!o.board||!o.dash)throw 0;
+    if(o.__uploads){for(const k of OVR_KEYS){try{if(o.__uploads[k]!=null)localStorage.setItem(k,o.__uploads[k]);}catch(e){}}}
+    delete o.__uploads;
     STORE=o;DB=STORE.board;D=STORE.dash;
-    save();renderAll();rerenderDash();toast('백업을 불러왔습니다');
+    try{const n=localStorage.getItem('bltech_ovr_naesu');if(n)NAESU=JSON.parse(n);}catch(e){}
+    try{const c=localStorage.getItem('bltech_ovr_codes');if(c)CODES=JSON.parse(c);}catch(e){}
+    try{const b=localStorage.getItem('bltech_ovr_bom');if(b){BOM=JSON.parse(b);const bd=localStorage.getItem('bltech_ovr_bom_date');if(bd)BOM_META={date:bd};}}catch(e){}
+    save();renderAll();rerenderDash();renderFinished();renderCodes();renderBOM();toast('백업을 불러왔습니다');
   }catch(e){toast('가져오기 실패: 올바른 백업 파일이 아닙니다');}};
   r.readAsText(file);
 }
@@ -1545,6 +1554,13 @@ let domFilter='all';
 /* ===== 엑셀 업로드 → 자동 반영 (완제품 재고 / 내수 재고현황 시트) ===== */
 (function(){try{const o=localStorage.getItem('bltech_ovr_naesu');if(o){const a=JSON.parse(o);if(Array.isArray(a)&&a.length)NAESU=a;}}catch(e){}})();
 function finXlsxActive(){return !!localStorage.getItem('bltech_ovr_naesu');}
+function nowStamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
+function ovrStamp(k){try{return localStorage.getItem(k)||'';}catch(e){return '';}}
+function finXlsxStatHTML(){
+  if(!finXlsxActive())return '';
+  const at=ovrStamp('bltech_ovr_naesu_at');
+  return `<span class="xlsx-on">✓ 최신 반영·자동저장${at?' · '+at:''}</span> <a class="xlsx-reset" onclick="resetFinishedXlsx()">원래대로</a>`;
+}
 function pickFinishedXlsx(){
   if(typeof XLSX==='undefined'){toast('엑셀 모듈 로딩 중 — 잠시 후 다시 시도하세요');return;}
   let inp=document.getElementById('xlsx-fin');
@@ -1582,9 +1598,9 @@ function uploadFinishedXlsx(file){
     const out=parseNaesuWB(new Uint8Array(r.result));
     if(!out.length){toast('읽을 데이터가 없어요 — 시트/형식을 확인하세요');return;}
     NAESU=out;
-    try{localStorage.setItem('bltech_ovr_naesu',JSON.stringify(out));}catch(e){}
+    try{localStorage.setItem('bltech_ovr_naesu',JSON.stringify(out));localStorage.setItem('bltech_ovr_naesu_at',nowStamp());}catch(e){}
     renderFinished();
-    toast(`완제품 재고 ${out.length}개 SKU 반영됨 (엑셀)`);
+    toast(`완제품 재고 ${out.length}개 SKU 반영·자동저장됨 (엑셀)`);
   }catch(e){toast('엑셀 오류: '+e.message);}};
   r.onerror=()=>toast('파일을 읽지 못했습니다');
   r.readAsArrayBuffer(file);
@@ -1626,8 +1642,8 @@ async function uploadFinishedPhoto(file){
       if(x.safe!=null&&isFinite(+x.safe))r[7]=Math.round(+x.safe);
       r[8]=r[6]-r[7];hit++;
     });
-    if(hit){try{localStorage.setItem('bltech_ovr_naesu',JSON.stringify(NAESU));}catch(e){}renderFinished();}
-    toast(`사진 반영: ${hit}개 SKU 갱신`+(miss.length?` · 코드 미일치 ${miss.length}건`:''));
+    if(hit){try{localStorage.setItem('bltech_ovr_naesu',JSON.stringify(NAESU));localStorage.setItem('bltech_ovr_naesu_at',nowStamp());}catch(e){}renderFinished();}
+    toast(`사진 반영: ${hit}개 SKU 갱신·자동저장`+(miss.length?` · 코드 미일치 ${miss.length}건`:''));
   }catch(e){
     const hint=/Failed to fetch/i.test(e.message)?' — 챗봇 서버가 실행 중인지 확인하세요':'';
     toast('사진 읽기 실패: '+e.message+hint);
@@ -1755,7 +1771,7 @@ function filterDom(g,el){
 function renderFinished(){
   document.getElementById('fin-today').textContent=finToday();
   document.getElementById('fin-dom-update').textContent='2026년 6월 기준 · 매일 갱신';
-  const _xs=document.getElementById('fin-xlsx-stat'); if(_xs)_xs.innerHTML=finXlsxActive()?'<span class="xlsx-on">✓ 엑셀 반영됨</span> <a class="xlsx-reset" onclick="resetFinishedXlsx()">원래대로</a>':'';
+  const _xs=document.getElementById('fin-xlsx-stat'); if(_xs)_xs.innerHTML=finXlsxStatHTML();
   ensureInvModal(); const _iw=document.getElementById('inv-who'); if(_iw)_iw.value=INV_WHO; renderInvHistory();
   renderDomKPI();
   renderDom();
@@ -2119,14 +2135,19 @@ function pickCodesXlsx(){
           msgs.push(res.raw!=null?`원부자재 ${res.raw}건`:`반제품 ${res.semi}·완제품 ${res.fin}건`+(res.skipped?` (제외 ${res.skipped})`:''));
         }
         localStorage.setItem('bltech_ovr_codes',JSON.stringify(CODES));
-        renderCodes(); toast('품목코드 갱신: '+msgs.join(' / '));
+        localStorage.setItem('bltech_ovr_codes_at',nowStamp());
+        renderCodes(); toast('품목코드 갱신·자동저장: '+msgs.join(' / '));
         const st=document.getElementById('codes-xlsx-stat'); if(st)st.innerHTML=codesXlsxStatHTML();
       }catch(e){toast('엑셀 오류: '+e.message);}
     };
     document.body.appendChild(inp);}
   inp.click();
 }
-function codesXlsxStatHTML(){return localStorage.getItem('bltech_ovr_codes')?'<span class="xlsx-on">✓ 엑셀 반영됨</span> <a class="xlsx-reset" onclick="resetCodesXlsx()">원래대로</a>':'';}
+function codesXlsxStatHTML(){
+  if(!localStorage.getItem('bltech_ovr_codes'))return '';
+  const at=ovrStamp('bltech_ovr_codes_at');
+  return `<span class="xlsx-on">✓ 최신 반영·자동저장${at?' · '+at:''}</span> <a class="xlsx-reset" onclick="resetCodesXlsx()">원래대로</a>`;
+}
 function resetCodesXlsx(){ if(confirm('엑셀로 갱신한 품목코드를 지우고 원래 데이터로 되돌릴까요?')){localStorage.removeItem('bltech_ovr_codes');location.reload();} }
 function bomScopeFromName(name){
   const n=(name||'').toUpperCase();
@@ -2176,7 +2197,8 @@ function pickBomXlsx(){
           BOM_META={date:`${today.getFullYear()}-${p(today.getMonth()+1)}-${p(today.getDate())}`};
           localStorage.setItem('bltech_ovr_bom',JSON.stringify(BOM));
           localStorage.setItem('bltech_ovr_bom_date',BOM_META.date);
-          renderBOM(); toast('BOM 갱신: '+msgs.join(' / '));
+          localStorage.setItem('bltech_ovr_bom_at',nowStamp());
+          renderBOM(); toast('BOM 갱신·자동저장: '+msgs.join(' / '));
           const st=document.getElementById('bom-xlsx-stat'); if(st)st.innerHTML=bomXlsxStatHTML();
         }
       }catch(e){toast('엑셀 오류: '+e.message);}
@@ -2184,7 +2206,11 @@ function pickBomXlsx(){
     document.body.appendChild(inp);}
   inp.click();
 }
-function bomXlsxStatHTML(){return localStorage.getItem('bltech_ovr_bom')?'<span class="xlsx-on">✓ 엑셀 반영됨</span> <a class="xlsx-reset" onclick="resetBomXlsx()">원래대로</a>':'';}
+function bomXlsxStatHTML(){
+  if(!localStorage.getItem('bltech_ovr_bom'))return '';
+  const at=ovrStamp('bltech_ovr_bom_at');
+  return `<span class="xlsx-on">✓ 최신 반영·자동저장${at?' · '+at:''}</span> <a class="xlsx-reset" onclick="resetBomXlsx()">원래대로</a>`;
+}
 function resetBomXlsx(){ if(confirm('엑셀로 갱신한 BOM을 지우고 원래 데이터로 되돌릴까요?')){localStorage.removeItem('bltech_ovr_bom');localStorage.removeItem('bltech_ovr_bom_date');location.reload();} }
 
 let bomType='FP', bomFam='all', bomScope=(typeof BOM_SCOPES!=='undefined'&&BOM_SCOPES[0])?BOM_SCOPES[0].k:'CAST';
