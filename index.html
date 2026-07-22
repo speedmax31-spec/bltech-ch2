@@ -136,8 +136,9 @@ button{font-family:var(--sans);cursor:pointer}
 .cb-head i{color:var(--teal);font-size:18px}
 .cb-x{margin-left:auto;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-size:12px;font-weight:600;cursor:pointer;padding:5px 11px;border-radius:8px;white-space:nowrap}
 .cb-x:hover{border-color:var(--teal);color:var(--teal)}
-.cb-collapse{position:absolute;left:-30px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:3px;
+.cb-collapse{position:absolute;left:-30px;top:50%;transform:translateY(-50%);display:none;flex-direction:column;align-items:center;gap:3px;
   background:var(--teal);color:#04110f;border:0;border-radius:12px 0 0 12px;padding:12px 6px;cursor:pointer;font-weight:700;font-size:11px;box-shadow:var(--shadow)}
+.cb-dock.open .cb-collapse{display:flex}   /* 열려 있을 때만 '접기' 손잡이 표시 */
 .cb-collapse i{font-size:18px}
 .cb-collapse:hover{filter:brightness(1.1)}
 .cb-body{flex:1;border:0;border-radius:0;height:auto;min-height:0}
@@ -911,7 +912,7 @@ footer b{color:var(--ink-soft)}
 
 <!-- 할 일 모달 -->
 <!-- 오른쪽 챗봇 도크 (모든 화면 공통) -->
-<button id="cb-toggle" class="cb-toggle" onclick="toggleCbDock()" title="BLTECH 챗봇 열기"><i class="ti ti-message-chatbot"></i><span>챗봇</span></button>
+<button id="cb-toggle" class="cb-toggle" onclick="toggleCbDock()" title="BLTECH 챗봇 열기"><i class="ti ti-message-chatbot"></i><span>열기</span></button>
 <div id="cb-dock" class="cb-dock">
   <button class="cb-collapse" onclick="toggleCbDock()" title="챗봇 접기"><i class="ti ti-chevron-right"></i><span>접기</span></button>
   <div class="cb-head"><i class="ti ti-message-chatbot"></i><span>BLTECH 챗봇</span><button class="cb-x" onclick="toggleCbDock()" title="접기">접기 ✕</button></div>
