@@ -251,7 +251,11 @@ footer b{color:var(--ink-soft)}
 .dash .top-bar-title{font-size:16px;font-weight:600}
 .dash .top-bar-sub{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
 .badge-live{font-size:11px;font-weight:500;padding:2px 8px;border-radius:4px;background:var(--mint);color:var(--teal-deep);border:.5px solid rgba(94,234,212,.3)}
-.fx-bar{display:flex;align-items:center;gap:6px;margin-left:auto;margin-right:10px;flex-wrap:wrap}
+.fx-box{margin-left:auto;margin-right:10px;background:var(--panel);border:1px solid rgba(20,184,166,.4);border-radius:12px;padding:7px 12px 8px;box-shadow:var(--shadow)}
+.fx-box-head{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--teal-deep);margin-bottom:6px;letter-spacing:.02em}
+.fx-box-head i{font-size:14px;color:var(--teal)}
+.fx-box-head .fx-date{margin-left:10px;font-weight:500}
+.fx-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .fx-pill{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:6px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);white-space:nowrap}
 .fx-pill b{color:var(--ink-faint);font-weight:600;margin-right:4px}
 .fx-pill .up{color:var(--red)}
@@ -573,7 +577,10 @@ footer b{color:var(--ink-soft)}
         <div class="top-bar-title">비엘테크 구매출고팀 대시보드</div>
         <div class="top-bar-sub">주문 → 원재료 → 재고 → 발주 → 공급업체 전체 통합</div>
       </div>
-      <div class="fx-bar" id="fx-bar" title="일일 기준환율 · 자동 갱신"></div>
+      <div class="fx-box" title="일일 기준환율 · 자동 갱신">
+        <div class="fx-box-head"><i class="ti ti-coin"></i>환율 정보<span class="fx-date" id="fx-date"></span></div>
+        <div class="fx-bar" id="fx-bar"></div>
+      </div>
       <span class="badge-live">● 실시간</span>
     </div>
 
@@ -2493,7 +2500,8 @@ async function fetchFx(){
       let arrow='';
       if(prev!=null&&isFinite(prev)){const d=v-prev;if(Math.abs(d)>=0.05)arrow=` <span class="${d>0?'up':'down'}">${d>0?'▲':'▼'}${Math.abs(d).toFixed(1)}</span>`;}
       return `<span class="fx-pill"><b>${k}</b>${v.toLocaleString(undefined,{minimumFractionDigits:dp,maximumFractionDigits:dp})}${arrow}</span>`;
-    }).join('')+`<span class="fx-date">${fx.date||''}${stale?' · 저장값':''}</span>`;
+    }).join('');
+    const de=document.getElementById('fx-date'); if(de)de.textContent=`기준 ${fx.date||''}`+(stale?' · 저장값':'');
   };
   let cached=null; try{cached=JSON.parse(localStorage.getItem(CACHE)||'null');}catch(e){}
   if(cached)render(cached,true);
