@@ -880,7 +880,7 @@ footer b{color:var(--ink-soft)}
 
       <!-- 생성된 발주서 -->
       <div class="panel">
-        <div class="panel-head"><div class="ph-title"><i class="ti ti-files" style="color:#5A9BD8"></i>생성된 발주서</div></div>
+        <div class="panel-head"><div class="ph-title"><i class="ti ti-files" style="color:#5A9BD8"></i>생성된 발주서</div><span class="ph-action accent" onclick="pickPoXlsx()">엑셀 불러오기</span><span class="xlsx-stat" id="po-xlsx-stat"></span></div>
         <div class="list" id="po-list"></div>
       </div>
     </div>
@@ -2212,6 +2212,89 @@ function bomXlsxStatHTML(){
   return `<span class="xlsx-on">✓ 최신 반영·자동저장${at?' · '+at:''}</span> <a class="xlsx-reset" onclick="resetBomXlsx()">원래대로</a>`;
 }
 function resetBomXlsx(){ if(confirm('엑셀로 갱신한 BOM을 지우고 원래 데이터로 되돌릴까요?')){localStorage.removeItem('bltech_ovr_bom');localStorage.removeItem('bltech_ovr_bom_date');location.reload();} }
+
+/* ===== 엑셀 업로드: 발주서 (시트 1장 = 발주서 1건) ===== */
+function xlsDateStr(v){
+  if(v==null||v==='')return '';
+  if(v instanceof Date){const d=new Date(v.getTime()+12*3600*1000); // 23:59 파싱 밀림 보정(반일)
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+  if(typeof v==='number'&&isFinite(v)){const d=new Date(Math.round((v-25569)*86400*1000));return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;}
+  return String(v).trim().slice(0,10);
+}
+function poFindLabel(rows,label,hi){
+  const want=label.replace(/\s+/g,'');
+  for(let i=0;i<Math.min(rows.length,hi);i++){
+    const r=rows[i]||[];
+    for(let j=0;j<r.length;j++){
+      const c=r[j]==null?'':String(r[j]).replace(/\s+/g,'');
+      if(c===want){ for(let k=j+1;k<Math.min(r.length,j+6);k++){ if(r[k]!=null&&String(r[k]).trim()!=='')return r[k]; } }
+    }
+  }
+  return '';
+}
+function parsePoWB(buf){
+  const wb=XLSX.read(buf,{type:'array',cellDates:true});
+  const out=[];
+  for(const sn of wb.SheetNames){
+    const rows=XLSX.utils.sheet_to_json(wb.Sheets[sn],{header:1,raw:true,defval:null});
+    const m=hdrMap(rows,['No','품명']); if(!m)continue;      // 발주서 양식 아닌 시트는 건너뜀
+    const H=m.H;
+    const sup=String(poFindLabel(rows,'수신',m.hi)||'').trim();
+    const date=xlsDateStr(poFindLabel(rows,'발주일자',m.hi));
+    const mgr=String(poFindLabel(rows,'담당자',m.hi)||'').trim();
+    const g=(r,k)=>H[k]==null||r[H[k]]==null?'':String(r[H[k]]).trim();
+    const num=(r,k)=>{const v=H[k]==null?null:r[H[k]];const n=Number(v);return isFinite(n)?n:0;};
+    const items=[];let total=0;
+    for(let i=m.hi+1;i<rows.length;i++){
+      const r=rows[i]||[];
+      const noCell=g(r,'No');
+      if(noCell==='계'){total=num(r,'금액');break;}
+      const name=g(r,'품명'); if(!name)continue;
+      items.push({name,kind:'원재료',spec:g(r,'비고'),qty:num(r,'수량'),unit:g(r,'단위'),
+        price:num(r,'단가'),amount:num(r,'금액'),due:xlsDateStr(H['납기요청일']!=null?r[H['납기요청일']]:null)});
+    }
+    if(!items.length)continue;
+    out.push({sup,date:date||sn,mgr,items,total});
+  }
+  return out;
+}
+function poSig(sup,date,items){return sup+'|'+date+'|'+items.map(it=>it.name+':'+it.qty).join(',');}
+function pickPoXlsx(){
+  if(typeof XLSX==='undefined'){toast('엑셀 모듈 로딩 중 — 잠시 후 다시 시도하세요');return;}
+  let inp=document.getElementById('xlsx-po');
+  if(!inp){inp=document.createElement('input');inp.type='file';inp.accept='.xlsx,.xls';inp.multiple=true;inp.id='xlsx-po';inp.style.display='none';
+    inp.onchange=async()=>{
+      const files=[...inp.files]; inp.value=''; if(!files.length)return;
+      try{
+        const exist=new Set(D.purchaseOrders.map(p=>poSig(p.sup,p.date,p.items)));
+        let added=0,dup=0,seq=D.purchaseOrders.length;
+        for(const f of files){
+          const pos=parsePoWB(new Uint8Array(await f.arrayBuffer()));
+          for(const po of pos){
+            const sig=poSig(po.sup,po.date,po.items);
+            if(exist.has(sig)){dup++;continue;}
+            exist.add(sig);seq++;
+            const due=(po.items.find(it=>it.due)||{}).due||'';
+            D.purchaseOrders.push({
+              id:'po'+Date.now()+'_'+seq,
+              no:'PO-'+String(po.date||'').replace(/-/g,'')+'-X'+String(seq).padStart(3,'0'),
+              sup:po.sup||f.name.replace(/\.(xlsx|xls)$/i,''),date:po.date,due,
+              note:(po.mgr?('담당: '+po.mgr):'')+(po.total?((po.mgr?' · ':'')+'합계 '+po.total.toLocaleString()+'원'):''),
+              items:po.items,status:'가져옴(엑셀)'
+            });
+            added++;
+          }
+        }
+        // 발주일자 내림차순 정렬(최신 위)
+        D.purchaseOrders.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+        if(added){try{localStorage.setItem('bltech_po_xls_at',nowStamp());}catch(e){}save();renderPO();}
+        const st=document.getElementById('po-xlsx-stat'); if(st&&added)st.innerHTML=`<span class="xlsx-on">✓ 최신 반영·자동저장 · ${ovrStamp('bltech_po_xls_at')}</span>`;
+        toast(`발주서 ${added}건 불러옴·자동저장`+(dup?` · 중복 ${dup}건 제외`:''));
+      }catch(e){toast('엑셀 오류: '+e.message);}
+    };
+    document.body.appendChild(inp);}
+  inp.click();
+}
 
 let bomType='FP', bomFam='all', bomScope=(typeof BOM_SCOPES!=='undefined'&&BOM_SCOPES[0])?BOM_SCOPES[0].k:'CAST';
 const BOM_PREFIX={RM:{l:'원자재',c:'#9CC5EC'},SM:{l:'부자재',c:'#F0C95E'},SF:{l:'반제품',c:'#BBB0FF'},FP:{l:'완제품',c:'#7DE6B6'}};
