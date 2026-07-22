@@ -146,6 +146,10 @@ button{font-family:var(--sans);cursor:pointer}
 .pn-row{display:grid;grid-template-columns:2fr 74px 62px 92px 1.2fr 22px;gap:6px;margin-bottom:6px;align-items:center}
 .pn-row input{font-size:12.5px;padding:7px 9px}
 .pn-row .inv-del{text-align:center}
+/* 완제품 재고 내수/수출 서브탭 */
+.fin-subtabs{display:flex;gap:8px;margin:2px 0 14px}
+.fin-subtabs .fst{font-size:13px;font-weight:600;padding:7px 18px;border-radius:9px}
+#content-finished .fst.active{background:var(--teal);color:#04110f;border-color:var(--teal)}
 .cb-body{flex:1;border:0;border-radius:0;height:auto;min-height:0}
 /* 상단 탭 줄: 메인 탭(왼쪽) + 룰렛 게임(오른쪽 분리) */
 .topnav{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
@@ -795,9 +799,15 @@ footer b{color:var(--ink-soft)}
         </div>
       </div>
 
-      <!-- 상: 내수 재고현황 -->
+      <div class="fin-subtabs">
+        <span class="fchip fst active" id="fst-dom" onclick="showFinSub('dom',this)">내수 재고</span>
+        <span class="fchip fst" id="fst-exp" onclick="showFinSub('exp',this)">수출 재고</span>
+      </div>
+
+      <div id="fin-dom-wrap">
+      <!-- 내수 재고현황 -->
       <div class="split-head sh-domestic">
-        <span class="sh-tag sht-d">상</span>
+        <span class="sh-tag sht-d">내수</span>
         <span class="sh-title d">내수 재고 현황</span>
         <span class="sh-sub d" id="fin-dom-update"></span>
       </div>
@@ -835,39 +845,33 @@ footer b{color:var(--ink-soft)}
         <div class="inv-hist" id="inv-hist" style="display:none"></div>
       </div>
 
-      <!-- 하: 수출 재고현황 (데이터 대기) -->
+      </div><!-- /fin-dom-wrap -->
+
+      <div id="fin-exp-wrap" style="display:none">
+      <!-- 수출 재고현황 -->
       <div class="split-head sh-export">
-        <span class="sh-tag sht-e">하</span>
+        <span class="sh-tag sht-e">수출</span>
         <span class="sh-title e">수출 재고 현황</span>
-        <span class="sh-sub e">국가/업체별 출고 기준 · 안전재고 미적용</span>
+        <span class="sh-sub e" id="fin-exp-update">국가/업체별 출고 기준 · 안전재고 미적용</span>
       </div>
       <div class="section-wrap">
+        <div class="kpi-strip" id="exp-kpi"></div>
         <div class="filter-bar">
-          <span style="font-size:11px;color:var(--color-text-secondary)">국가/업체</span>
-          <select id="exp-country" disabled><option>전체 (데이터 입력 대기)</option></select>
-          <input type="text" placeholder="제품코드 검색" disabled />
+          <span style="font-size:11px;color:var(--color-text-secondary)">거래처</span>
+          <select id="exp-sup" onchange="renderExp()"><option value="all">전체</option></select>
+          <input type="text" id="exp-search" placeholder="제품코드 검색" oninput="renderExp()" />
           <span style="font-size:11px;color:#A99CFF;margin-left:auto">※ 해외는 업체별 출고 기준이 달라 안전재고 없음</span>
         </div>
-        <div class="empty-export">
-          <div class="empty-icon"><i class="ti ti-world-upload" aria-hidden="true"></i></div>
-          <div class="empty-title">수출 재고 데이터 입력 대기 중</div>
-          <div class="empty-sub">
-            내수 재고현황과 동일한 포맷으로 준비했습니다. 해외는 안전재고·과부족 대신
-            <b>국가(업체)별 출고 기준</b>으로 관리됩니다. 수출 재고 데이터를 올려주시면 이 영역을 채우겠습니다.
-          </div>
-          <div class="empty-cols">
-            <span class="empty-col-chip">제품군</span>
-            <span class="empty-col-chip">브랜드</span>
-            <span class="empty-col-chip">Type</span>
-            <span class="empty-col-chip">Color</span>
-            <span class="empty-col-chip">제품코드</span>
-            <span class="empty-col-chip">국가/업체</span>
-            <span class="empty-col-chip">현재고</span>
-            <span class="empty-col-chip" style="opacity:0.5;text-decoration:line-through">안전재고</span>
-            <span class="empty-col-chip">출고 기준</span>
-          </div>
+        <div class="tbl-scroll">
+          <table class="tbl">
+            <thead><tr>
+              <th>해외거래처</th><th>차수/비고</th><th>제품군</th><th>Type</th><th>기재</th><th>Color</th><th>제품코드</th><th class="r">수량</th>
+            </tr></thead>
+            <tbody id="exp-body"></tbody>
+          </table>
         </div>
       </div>
+      </div><!-- /fin-exp-wrap -->
     </div>
 
     <!-- 발주서 -->
@@ -1073,7 +1077,7 @@ function save(){
 let STORE, DB, D;
 
 /* ===================== 백업 / 복원 ===================== */
-const OVR_KEYS=['bltech_ovr_naesu','bltech_ovr_naesu_at','bltech_ovr_codes','bltech_ovr_codes_at','bltech_ovr_bom','bltech_ovr_bom_date','bltech_ovr_bom_at'];
+const OVR_KEYS=['bltech_ovr_naesu','bltech_ovr_naesu_at','bltech_ovr_haewoe','bltech_ovr_codes','bltech_ovr_codes_at','bltech_ovr_bom','bltech_ovr_bom_date','bltech_ovr_bom_at'];
 function exportData(){
   const d=new Date(),p=n=>String(n).padStart(2,'0');
   const payload=JSON.parse(JSON.stringify(STORE));
@@ -1581,10 +1585,14 @@ document.getElementById('importFile').onchange=e=>{if(e.target.files[0]){importD
 /* ===================== 완제품 재고 ===================== */
 let NAESU=[["Cast","Neal","NHC","F","BL","NHC-2F-BL",380,300,80],["Cast","Neal","NHC","F","BL","NHC-3F-BL",540,800,-260],["Cast","Neal","NHC","F","BL","NHC-4F-BL",960,800,160],["Cast","Neal","NHC","F","BL","NHC-5F-BL",80,100,-20],["Cast","Neal","NHC","F","GR","NHC-2F-GR",2640,2400,240],["Cast","Neal","NHC","F","GR","NHC-3F-GR",2430,3000,-570],["Cast","Neal","NHC","F","GR","NHC-4F-GR",4210,4000,210],["Cast","Neal","NHC","F","GR","NHC-5F-GR",1190,1200,-10],["Cast","Neal","NHC","F","PN","NHC-2F-PN",20,100,-80],["Cast","Neal","NHC","F","PN","NHC-3F-PN",0,200,-200],["Cast","Neal","NHC","F","PN","NHC-4F-PN",260,200,60],["Cast","Neal","NHC","F","PN","NHC-5F-PN",80,100,-20],["Cast","Neal","NHC","F","WH","NHC-2F-WH",200,300,-100],["Cast","Neal","NHC","F","WH","NHC-3F-WH",430,300,130],["Cast","Neal","NHC","F","WH","NHC-4F-WH",590,400,190],["Cast","Neal","NHC","F","WH","NHC-5F-WH",250,100,150],["Cast","Neal","NAC","F","BL","NAC-2F-BL",30,50,-20],["Cast","Neal","NAC","F","BL","NAC-3F-BL",100,200,-100],["Cast","Neal","NAC","F","BL","NAC-4F-BL",420,200,220],["Cast","Neal","NAC","F","BL","NAC-5F-BL",130,100,30],["Cast","Neal","NAC","F","GR","NAC-2F-GR",180,500,-320],["Cast","Neal","NAC","F","GR","NAC-3F-GR",670,1200,-530],["Cast","Neal","NAC","F","GR","NAC-4F-GR",700,1600,-900],["Cast","Neal","NAC","F","GR","NAC-5F-GR",190,300,-110],["Cast","Neal","NAC","F","PN","NAC-2F-PN",0,0,0],["Cast","Neal","NAC","F","PN","NAC-3F-PN",0,0,0],["Cast","Neal","NAC","F","PN","NAC-4F-PN",0,0,0],["Cast","Neal","NAC","F","PN","NAC-5F-PN",0,0,0],["Cast","Neal","NAC","F","WH","NAC-2F-WH",0,0,0],["Cast","Neal","NAC","F","WH","NAC-3F-WH",0,0,0],["Cast","Neal","NAC","F","WH","NAC-4F-WH",0,0,0],["Cast","Neal","NAC","F","WH","NAC-5F-WH",0,0,0],["Cast","Neal","NPC","P","BL","NPC-2P-BL",240,300,-60],["Cast","Neal","NPC","P","BL","NPC-3P-BL",510,400,110],["Cast","Neal","NPC","P","BL","NPC-4P-BL",520,400,120],["Cast","Neal","NPC","P","BL","NPC-5P-BL",240,200,40],["Cast","Neal","NPC","P","GR","NPC-2P-GR",800,800,0],["Cast","Neal","NPC","P","GR","NPC-3P-GR",1460,1200,260],["Cast","Neal","NPC","P","GR","NPC-4P-GR",440,1600,-1160],["Cast","Neal","NPC","P","GR","NPC-5P-GR",520,600,-80],["Cast","Neal","NPC","P","PN","NPC-2P-PN",100,100,0],["Cast","Neal","NPC","P","PN","NPC-3P-PN",170,200,-30],["Cast","Neal","NPC","P","PN","NPC-4P-PN",200,200,0],["Cast","Neal","NPC","P","PN","NPC-5P-PN",90,100,-10],["Cast","Neal","NPC","P","WH","NPC-2P-WH",220,100,120],["Cast","Neal","NPC","P","WH","NPC-3P-WH",40,100,-60],["Cast","Neal","NPC","P","WH","NPC-4P-WH",80,100,-20],["Cast","Neal","NPC","P","WH","NPC-5P-WH",100,100,0],["Cast","Smile","SMRC","F","BL","SMRC-2F-BL",170,50,120],["Cast","Smile","SMRC","F","BL","SMRC-3F-BL",0,50,-50],["Cast","Smile","SMRC","F","BL","SMRC-4F-BL",150,50,100],["Cast","Smile","SMRC","F","BL","SMRC-5F-BL",180,50,130],["Cast","Smile","SMRC","F","GR","SMRC-2F-GR",10,100,-90],["Cast","Smile","SMRC","F","GR","SMRC-3F-GR",100,200,-100],["Cast","Smile","SMRC","F","GR","SMRC-4F-GR",270,300,-30],["Cast","Smile","SMRC","F","GR","SMRC-5F-GR",100,100,0],["Cast","Smile","SMRC","F","WH","SMRC-2F-WH",110,100,10],["Cast","Smile","SMRC","F","WH","SMRC-3F-WH",20,200,-180],["Cast","Smile","SMRC","F","WH","SMRC-4F-WH",370,300,70],["Cast","Smile","SMRC","F","WH","SMRC-5F-WH",120,100,20],["Cast","Smile","SMRC","P","BL","SMRC-2P-BL",70,200,-130],["Cast","Smile","SMRC","P","BL","SMRC-3P-BL",130,400,-270],["Cast","Smile","SMRC","P","BL","SMRC-4P-BL",370,600,-230],["Cast","Smile","SMRC","P","BL","SMRC-5P-BL",40,100,-60],["Cast","Smile","SMRC","P","GR","SMRC-2P-GR",200,100,100],["Cast","Smile","SMRC","P","GR","SMRC-3P-GR",190,100,90],["Cast","Smile","SMRC","P","GR","SMRC-4P-GR",50,100,-50],["Cast","Smile","SMRC","P","GR","SMRC-5P-GR",40,100,-60],["Cast","Smile","SMRC","P","PN","SMRC-2P-PN",50,100,-50],["Cast","Smile","SMRC","P","PN","SMRC-3P-PN",80,100,-20],["Cast","Smile","SMRC","P","PN","SMRC-4P-PN",130,100,30],["Cast","Smile","SMRC","P","PN","SMRC-5P-PN",90,100,-10],["Cast","Smile","SMRC","P","WH","SMRC-2P-WH",60,100,-40],["Cast","Smile","SMRC","P","WH","SMRC-3P-WH",100,200,-100],["Cast","Smile","SMRC","P","WH","SMRC-4P-WH",160,200,-40],["Cast","Smile","SMRC","P","WH","SMRC-5P-WH",80,100,-20],["Splint","Neal","NHRS","F","WH","NHRS-2450F",31,40,-9],["Splint","Neal","NHRS","F","WH","NHRS-3450F",143,350,-207],["Splint","Neal","NHRS","F","WH","NHRS-4450F",289,400,-111],["Splint","Neal","NHRS","F","WH","NHRS-5450F",143,120,23],["Splint","Neal","NHRS","F","WH","NHRS-6450F",12,40,-28],["Splint","Neal","NHRS","N","WH","NHRS-2450N",110,60,50],["Splint","Neal","NHRS","N","WH","NHRS-3450N",477,600,-123],["Splint","Neal","NHRS","N","WH","NHRS-4450N",900,1000,-100],["Splint","Neal","NHRS","N","WH","NHRS-5450N",237,350,-113],["Splint","Neal","NHRS","N","WH","NHRS-6450N",39,40,-1],["Splint","Smile","SMRS","F","WH","SMRS-2450F",8,2,6],["Splint","Smile","SMRS","F","WH","SMRS-3450F",1,3,-2],["Splint","Smile","SMRS","F","WH","SMRS-4450F",30,2,28],["Splint","Smile","SMRS","F","WH","SMRS-5450F",3,2,1],["Splint","Smile","SMRS","F","WH","SMRS-6450F",1,5,-4],["Splint","Smile","SMRS","S","WH","SMRS-2450N",7,10,-3],["Splint","Smile","SMRS","S","WH","SMRS-3450N",29,10,19],["Splint","Smile","SMRS","S","WH","SMRS-4450N",53,20,33],["Splint","Smile","SMRS","S","WH","SMRS-5450N",17,20,-3],["Splint","Smile","SMRS","S","WH","SMRS-6450N",1,0,1],["Pre-Cut","Neal","NHPS","F","WH","NHPS-2012F",105,45,60],["Pre-Cut","Neal","NHPS","F","WH","NHPS-3014F",390,450,-60],["Pre-Cut","Neal","NHPS","F","WH","NHPS-3040F",155,400,-245],["Pre-Cut","Neal","NHPS","F","WH","NHPS-4018F",340,300,40],["Pre-Cut","Neal","NHPS","F","WH","NHPS-4034F",225,750,-525],["Pre-Cut","Neal","NHPS","F","WH","NHPS-5034F",135,500,-365],["Pre-Cut","Neal","NHPS","F","WH","NHPS-5050F",125,150,-25],["Pre-Cut","Neal","NHPS","F","WH","NHPS-6034F",5,10,-5],["Pre-Cut","Neal","NHPS","F","WH","NHPS-6050F",0,10,-10],["Pre-Cut","Neal","NHPS","N","WH","NHPS-2012N",80,75,5],["Pre-Cut","Neal","NHPS","N","WH","NHPS-3014N",115,950,-835],["Pre-Cut","Neal","NHPS","N","WH","NHPS-3040N",305,400,-95],["Pre-Cut","Neal","NHPS","N","WH","NHPS-4018N",335,400,-65],["Pre-Cut","Neal","NHPS","N","WH","NHPS-4034N",175,1000,-825],["Pre-Cut","Neal","NHPS","N","WH","NHPS-5034N",105,250,-145],["Pre-Cut","Neal","NHPS","N","WH","NHPS-5050N",170,150,20],["Pre-Cut","Neal","NHPS","N","WH","NHPS-6034N",5,15,-10],["Pre-Cut","Neal","NHPS","N","WH","NHPS-6050N",5,10,-5],["Pre-Cut","Smile","SMPS","F","WH","SMPS-2012F",70,15,55],["Pre-Cut","Smile","SMPS","F","WH","SMPS-3014F",40,50,-10],["Pre-Cut","Smile","SMPS","F","WH","SMPS-3040F",35,30,5],["Pre-Cut","Smile","SMPS","F","WH","SMPS-4018F",65,40,25],["Pre-Cut","Smile","SMPS","F","WH","SMPS-4034F",95,85,10],["Pre-Cut","Smile","SMPS","F","WH","SMPS-5034F",70,20,50],["Pre-Cut","Smile","SMPS","F","WH","SMPS-5050F",5,25,-20],["Pre-Cut","Smile","SMPS","S","WH","SMPS-2012N",80,25,55],["Pre-Cut","Smile","SMPS","S","WH","SMPS-3014N",120,110,10],["Pre-Cut","Smile","SMPS","S","WH","SMPS-3040N",75,70,5],["Pre-Cut","Smile","SMPS","S","WH","SMPS-4018N",60,110,-50],["Pre-Cut","Smile","SMPS","S","WH","SMPS-4034N",60,100,-40],["Pre-Cut","Smile","SMPS","S","WH","SMPS-5034N",95,100,-5],["Pre-Cut","Smile","SMPS","S","WH","SMPS-5050N",90,50,40],["Pre-Cut","Smile","SMPS","S","WH","SMPS-6034N",35,25,10],["Pre-Cut","Smile","SMPS","S","WH","SMPS-6050N",20,10,10],["Pre-Mold","Neal","NPLA","N","WH","NPLA-L",5,10,-5],["Pre-Mold","Neal","NPLA","N","WH","NPLA-M",10,20,-10],["Pre-Mold","Neal","NPLA","N","WH","NPLA-S",15,10,5],["Pre-Mold","Neal","NPLL","N","WH","NPLL-L",0,5,-5],["Pre-Mold","Neal","NPLL","N","WH","NPLL-M",5,10,-5],["Pre-Mold","Neal","NPLL","N","WH","NPLL-S",15,5,10],["Pre-Mold","Neal","NPLL-I","N","WH","NPLL-IL",5,10,-5],["Pre-Mold","Neal","NPLL-I","N","WH","NPLL-IM",5,10,-5],["Pre-Mold","Neal","NPLL-I","N","WH","NPLL-IS",20,0,20],["Pre-Mold","Neal","NPSA","N","WH","NPSA-L",15,10,5],["Pre-Mold","Neal","NPSA","N","WH","NPSA-M",25,10,15],["Pre-Mold","Neal","NPSA","N","WH","NPSA-S",0,10,-10],["Pre-Mold","Neal","NPSA-ST","N","WH","NPSA-STL",5,0,5],["Pre-Mold","Neal","NPSA-ST","N","WH","NPSA-STM",0,0,0],["Pre-Mold","Neal","NPSA-ST","N","WH","NPSA-STS",10,0,10],["Pre-Mold","Neal","NPSL","N","WH","NPSL-L",10,10,0],["Pre-Mold","Neal","NPSL","N","WH","NPSL-M",15,10,5],["Pre-Mold","Neal","NPSL","N","WH","NPSL-S",10,10,0],["R","Smile","SKLA","N","BL","SKLA-BL",0,0,0],["R","Smile","SKLL","N","BL","SKLL-BL",0,0,0],["R","Smile","SKSA","N","BL","SKSA-BL",0,0,0],["R","Smile","SKSL","N","BL","SKSL-BL",0,0,0],["Under-Pad","Neal","NUP","A.S","BL","NUP-2100",5,5,0],["Under-Pad","Neal","NUP","A.S","BL","NUP-3100",5,20,-15],["Under-Pad","Neal","NUP","A.S","BL","NUP-4100",2,15,-13],["Under-Pad","Neal","NUP","A.S","BL","NUP-5100",2,2,0],["Under-Pad","Neal","NUP","A.S","BL","NUP-6100",0,0,0],["NEAL COVER","Neal","NCB","A.S","BL","NCB-2010",130,150,-20],["NEAL COVER","Neal","NCB","A.S","BL","NCB-3008",20,40,-20],["NEAL COVER","Neal","NCB","A.S","BL","NCB-3012",155,160,-5],["NEAL COVER","Neal","NCB","A.S","BL","NCB-4008",170,20,150],["NEAL COVER","Neal","NCB","A.S","BL","NCB-4014",25,60,-35],["NEAL COVER","Neal","NCB","A.S","BL","NCB-4018",70,5,65],["NEAL COVER","Neal","NCB","A.S","BL","NCB-5012",25,5,20],["NEAL COVER","Neal","NCB","A.S","BL","NCB-5018",20,5,15]];
 const FIN_COLORS={BL:'#2D6FB8',GR:'#3B8C5A',PN:'#D98AB0',WH:'#D9D9D9',SB:'#7FA8D0',PP:'#8B6FB0',OR:'#E08A3C',YL:'#E0C03C',RD:'#C8503C','-':'#B0B0B0'};
+let HAEWOE=[["BELL SUGICAL","5차(해상)","Cast","NPC","F","GR","NPC-3F-GR",300],["DAONSA","8차(해상)","Cast","NHC","F","WH","NHC-2F-WH",200],["HACHIKO MEDICAL","17차(분할 2차분)","Splint","NHRS","F","","NHRS-1450F",8],["HACHIKO MEDICAL","17차(분할 2차분)","Splint","NHRS","F","","NHRS-4450F",48],["HACHIKO MEDICAL","17차(분할 2차분)","Splint","NHRS","F","","NHRS-6450F",40],["HACHIKO MEDICAL","17차(분할 2차분)","Splint","NHRS","F","","NHRS-7450F",8],["HACHIKO MEDICAL","17차(분할 2차분)","Splint","NHRS","F","","NHRS-8450F",8],["HACHIKO MEDICAL","17차(분할 2차분)","Splint","NHRS","S","","NHRS-4450S",64],["HACHIKO MEDICAL","17차(분할 2차분)","Splint","NHRS","S","","NHRS-5450S",64],["HACHIKO MEDICAL","17차(분할 2차분)","Splint","NHRS","S","","NHRS-6450S",96],["HACHIKO MEDICAL","17차(분할 2차분)","Splint","NHRS","S","","NHRS-7450S",32],["HACHIKO MEDICAL","17차(분할 2차분)","Splint","NHRS","S","","NHRS-8450S",32],["HACHIKO MEDICAL","17차(분할 2차분)","Pre-Cut","NHPS","S","","NHPS-3012S",80],["HACHIKO MEDICAL","17차(분할 2차분)","Pre-Cut","NHPS","S","","NHPS-3024S",40],["HACHIKO MEDICAL","17차(분할 2차분)","Pre-Cut","NHPS","S","","NHPS-4026S",40],["HACHIKO MEDICAL","17차(분할 2차분)","Pre-Cut","NHPS","S","","NHPS-5028S",40],["HACHIKO MEDICAL","17차(분할 2차분)","Pre-Cut","NHPS","S","","NHPS-6034S",20],["KREWI","24차(해상)","Cast","NDC","DTY","DB","NDC-2P-DB",500],["KREWI","24차(해상)","Cast","NDC","DTY","DB","NDC-4P-DB",200],["KREWI","24차(해상)","Splint","KHRS","S","","KHRS-2450S",48],["KREWI","24차(해상)","Splint","KHRS","S","","KHRS-3450S",160],["KREWI","24차(해상)","Pre-Cut","KHPS","S","","KHPS-2012S",1000],["KREWI","24차(해상)","Pre-Cut","KHPS","S","","KHPS-3012S",1000],["KREWI","24차(해상)","Pre-Cut","KHPS","S","","KHPS-3024S",250],["OSSUR","190차 ECD","Ossur Cast","PRE","D","BK","PRE-2D-BK",300],["OSSUR","190차 ECD","Ossur Cast","PRE","D","BK","PRE-4D-BK",100],["OSSUR","190차 ECD","Ossur Cast","PRE","D","GN","PRE-2D-GN",100],["OSSUR","190차 ECD","Ossur Cast","PRE","D","GN","PRE-3D-GN",200],["OSSUR","190차 ECD","Ossur Cast","PRE","D","HP","PRE-2D-HP",100],["OSSUR","190차 ECD","Ossur Cast","PRE","D","HP","PRE-3D-HP",500],["OSSUR","190차 ECD","Ossur Cast","PRE","D","HP","PRE-4D-HP",100],["OSSUR","190차 ECD","Ossur Cast","PRE","D","LB","PRE-2D-LB",200],["OSSUR","190차 ECD","Ossur Cast","PRE","D","OR","PRE-2D-OR",200],["OSSUR","190차 ECD","Ossur Cast","PRE","D","OR","PRE-3D-OR",300],["OSSUR","190차 ECD","Ossur Cast","PRE","D","OR","PRE-4D-OR",200],["OSSUR","190차 ECD","Ossur Cast","PRE","D","PR","PRE-3D-PR",400],["OSSUR","190차 ECD","Ossur Cast","PRE","D","RB","PRE-2D-RB",100],["OSSUR","190차 ECD","Ossur Cast","PRE","D","RD","PRE-2D-RD",200],["OSSUR","190차 ECD","Ossur Cast","PRE","D","RD","PRE-3D-RD",200],["OSSUR","190차 ECD","Ossur Cast","PRE","D","RD","PRE-4D-RD",200],["OSSUR","190차 ECD","Ossur Cast","PRE","D","WH","PRE-4D-WH",1000],["OSSUR","190차 ECD","Ossur Pre-Cut","ORTC","F","","ORTC-0530F",40],["OSSUR","190차 ECD","Ossur Splint","ORTR","F","","ORTR-0515F",48],["OSSUR","190차 ECD","Ossur Splint","ORTR","F","","ORTR-0415F",16],["OSSUR","선행생산","Ossur Cast","PRE","D","HP","PRE-3D-HP",200],["OSSUR","선행생산","Ossur Cast","PRE","D","OR","PRE-2D-OR",200],["OSSUR","선행생산","Ossur Cast","PRE","D","OR","PRE-3D-OR",200],["OSSUR","선행생산","Ossur Cast","PRE","D","PK","PRE-4D-PK",180],["OSSUR","선행생산","Ossur Cast","PRE","D","RD","PRE-2D-RD",100],["OSSUR","선행생산","Ossur Cast","PRE","D","RD","PRE-3D-RD",100],["SIGMAX","93차(도쿄)","Sigmax Splint","BSRS","S","","BSRS-1300S",144],["SIGMAX","93차(도쿄)","Sigmax Splint","BSRS","S","","BSRS-2450S",96],["SIGMAX","93차(도쿄)","Sigmax Splint","BSRS","S","","BSRS-5450S",64],["SIGMAX","93차(도쿄)","Sigmax Splint","BSRS","S","","BSRS-6450S",32],["SIGMAX","93차(도쿄)","Sigmax Pre-Cut","BSPS","F","","BSPS-4040F",80],["SIGMAX","93차(도쿄)","Sigmax Pre-Cut","BSPS","F","","BSPS-4016F-BULK",650],["SIGMAX","93차(도쿄)","Hybird","HSA","N","","HSA-L",1700],["SIGMAX","93차(도쿄)","Hybird","HSA","N","","HSA-S",200],["SIGMAX","93차(도쿄)","Hybird","HSS","F","","HSS-M",180],["SIGMAX","불량대기품","Sigmax Splint","BSRS","F","","BSRS-3450F",191],["SIGMAX","93차(오사카)","Sigmax Splint","BSRS","S","","BSRS-5450S",32],["ORTHOTAPE","선행생산","Cast","NPC","F","SB","NPC-2F-SB",100]];
 let domFilter='all';
 
 /* ===== 엑셀 업로드 → 자동 반영 (완제품 재고 / 내수 재고현황 시트) ===== */
-(function(){try{const o=localStorage.getItem('bltech_ovr_naesu');if(o){const a=JSON.parse(o);if(Array.isArray(a)&&a.length)NAESU=a;}}catch(e){}})();
+(function(){try{
+  const o=localStorage.getItem('bltech_ovr_naesu');if(o){const a=JSON.parse(o);if(Array.isArray(a)&&a.length)NAESU=a;}
+  const h=localStorage.getItem('bltech_ovr_haewoe');if(h){const a=JSON.parse(h);if(Array.isArray(a)&&a.length)HAEWOE=a;}
+}catch(e){}})();
 function finXlsxActive(){return !!localStorage.getItem('bltech_ovr_naesu');}
 function nowStamp(){const d=new Date(),p=n=>String(n).padStart(2,'0');return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;}
 function ovrStamp(k){try{return localStorage.getItem(k)||'';}catch(e){return '';}}
@@ -1624,16 +1632,90 @@ function parseNaesuWB(buf){
   }
   return out;
 }
+function parseHaewoeWB(buf){
+  // '해외 재고현황' 시트: 해외거래처/비고/제품군/Type/기재/Color/제품코드/요약(수량)
+  // 피벗 병합셀 → 계층 forward-fill (상위 값이 바뀌면 하위 리셋), '요약'/'총합계' 소계행 제외
+  const wb=XLSX.read(buf,{type:'array'});
+  const ws=wb.Sheets['해외 재고현황'];
+  if(!ws)return null;
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  let hi=-1;
+  for(let i=0;i<rows.length;i++){const rr=(rows[i]||[]).map(c=>c==null?'':String(c).trim());if(rr.includes('해외거래처')&&rr.includes('제품코드')){hi=i;break;}}
+  if(hi<0)throw new Error("해외 시트 헤더(해외거래처/제품코드)를 찾을 수 없습니다");
+  const H={};(rows[hi]||[]).forEach((c,idx)=>{const t=c==null?'':String(c).trim();if(t&&H[t]==null)H[t]=idx;});
+  const lv=[H['해외거래처'],H['비고'],H['제품군'],H['Type'],H['기재'],H['Color']];
+  const ciCode=H['제품코드'], ciQty=(H['요약']!=null?H['요약']:H['수량']);
+  if(ciCode==null||ciQty==null)throw new Error("해외 시트 컬럼(제품코드/요약)을 못 찾았습니다");
+  const g=(r,idx)=>idx==null||r[idx]==null?'':String(r[idx]).trim();
+  const skip=v=>v.includes('요약')||v.includes('총합계');
+  const ff=['','','','','',''],out=[];
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i]||[];
+    let top=-1;
+    for(let k=0;k<6;k++){const v=g(r,lv[k]);if(v&&!skip(v)){top=k;break;}}
+    if(top>=0){for(let m=top+1;m<6;m++)ff[m]='';}
+    for(let k=0;k<6;k++){const v=g(r,lv[k]);if(v&&!skip(v))ff[k]=v;}
+    const code=g(r,ciCode);
+    if(!code)continue;
+    const q=Number(r[ciQty]);if(!isFinite(q))continue;
+    out.push([ff[0],ff[1],ff[2],ff[3],ff[4],ff[5],code,Math.round(q)]);
+  }
+  return out;
+}
+function showFinSub(which,el){
+  document.getElementById('fin-dom-wrap').style.display=which==='dom'?'':'none';
+  document.getElementById('fin-exp-wrap').style.display=which==='exp'?'':'none';
+  document.querySelectorAll('.fin-subtabs .fst').forEach(c=>c.classList.remove('active'));
+  if(el)el.classList.add('active');
+  if(which==='exp')renderExp();
+}
+function renderExp(){
+  const body=document.getElementById('exp-body'); if(!body)return;
+  const sel=document.getElementById('exp-sup');
+  const sups=[...new Set(HAEWOE.map(r=>r[0]).filter(Boolean))].sort();
+  const cur=sel.value||'all';
+  sel.innerHTML='<option value="all">전체</option>'+sups.map(s=>`<option value="${esc(s)}"${s===cur?' selected':''}>${esc(s)}</option>`).join('');
+  const q=(document.getElementById('exp-search').value||'').toUpperCase();
+  let rows=HAEWOE.slice();
+  if(sel.value&&sel.value!=='all')rows=rows.filter(r=>r[0]===sel.value);
+  if(q)rows=rows.filter(r=>String(r[6]).toUpperCase().includes(q));
+  // KPI
+  const tot=rows.reduce((a,r)=>a+(+r[7]||0),0);
+  document.getElementById('exp-kpi').innerHTML=
+    `<div class="kpi-c"><div class="kpi-cl">거래처</div><div class="kpi-cv info">${new Set(rows.map(r=>r[0])).size}</div></div>`+
+    `<div class="kpi-c"><div class="kpi-cl">SKU</div><div class="kpi-cv">${rows.length}</div></div>`+
+    `<div class="kpi-c"><div class="kpi-cl">총 수량</div><div class="kpi-cv" style="color:var(--teal-deep)">${tot.toLocaleString()}</div></div>`;
+  // 표 (거래처별 그룹행)
+  let html='',last=null;
+  rows.forEach(r=>{
+    if(r[0]!==last){
+      const gsum=rows.filter(x=>x[0]===r[0]).reduce((a,x)=>a+(+x[7]||0),0);
+      html+=`<tr class="grp-row"><td colspan="8">${esc(r[0])} · ${rows.filter(x=>x[0]===r[0]).length}종 · 합계 ${gsum.toLocaleString()}</td></tr>`;
+      last=r[0];
+    }
+    html+=`<tr><td style="color:var(--color-text-secondary);font-size:11px">${esc(r[0])}</td><td style="color:var(--color-text-secondary)">${esc(r[1])}</td>`+
+      `<td>${esc(r[2])}</td><td style="color:var(--color-text-secondary)">${esc(r[3])}</td><td class="c">${esc(r[4])}</td>`+
+      `<td>${r[5]?esc(r[5]):'<span style="color:var(--color-text-secondary)">—</span>'}</td>`+
+      `<td style="font-weight:500">${esc(r[6])}</td><td class="r" style="font-weight:600">${(+r[7]||0).toLocaleString()}</td></tr>`;
+  });
+  if(!rows.length)html='<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--color-text-secondary)">조건에 맞는 데이터가 없습니다</td></tr>';
+  body.innerHTML=html;
+}
 function uploadFinishedXlsx(file){
   const r=new FileReader();
-  r.onload=()=>{try{
-    const out=parseNaesuWB(new Uint8Array(r.result));
-    if(!out.length){toast('읽을 데이터가 없어요 — 시트/형식을 확인하세요');return;}
-    NAESU=out;
-    try{localStorage.setItem('bltech_ovr_naesu',JSON.stringify(out));localStorage.setItem('bltech_ovr_naesu_at',nowStamp());}catch(e){}
+  r.onload=()=>{
+    const buf=new Uint8Array(r.result);
+    let dom=null,exp=null;const errs=[];
+    try{dom=parseNaesuWB(buf);}catch(e){errs.push('내수: '+e.message);}
+    try{exp=parseHaewoeWB(buf);}catch(e){errs.push('수출: '+e.message);}
+    if((!dom||!dom.length)&&(!exp||!exp.length)){toast('읽을 시트가 없어요 — '+(errs.join(' / ')||'형식을 확인하세요'));return;}
+    const msgs=[];
+    if(dom&&dom.length){NAESU=dom;try{localStorage.setItem('bltech_ovr_naesu',JSON.stringify(dom));}catch(e){}msgs.push(`내수 ${dom.length} SKU`);}
+    if(exp&&exp.length){HAEWOE=exp;try{localStorage.setItem('bltech_ovr_haewoe',JSON.stringify(exp));}catch(e){}msgs.push(`수출 ${exp.length}행`);}
+    try{localStorage.setItem('bltech_ovr_naesu_at',nowStamp());}catch(e){}
     renderFinished();
-    toast(`완제품 재고 ${out.length}개 SKU 반영·자동저장됨 (엑셀)`);
-  }catch(e){toast('엑셀 오류: '+e.message);}};
+    toast('재고 반영·자동저장: '+msgs.join(' · '));
+  };
   r.onerror=()=>toast('파일을 읽지 못했습니다');
   r.readAsArrayBuffer(file);
 }
@@ -1807,6 +1889,7 @@ function renderFinished(){
   ensureInvModal(); const _iw=document.getElementById('inv-who'); if(_iw)_iw.value=INV_WHO; renderInvHistory();
   renderDomKPI();
   renderDom();
+  renderExp();
 }
 
 /* ===================== 발주서 ===================== */
@@ -2450,6 +2533,7 @@ const XLSX_TABS={
   finished:{label:'완제품재고',build:add=>{
     add('완제품재고',['제품군','브랜드','Type','기재','Color','제품코드','현재고','안전재고','과부족'],
       NAESU.map(r=>{const cur=r[6]+invNet(r[5]);return [r[0],r[1],r[2],r[3],r[4],r[5],cur,r[7],cur-r[7]];}));
+    add('수출재고',['해외거래처','차수/비고','제품군','Type','기재','Color','제품코드','수량'],HAEWOE);
     add('입출고내역',['시각','구분','제품코드','입출','수량','입력자','메모'],
       invTxList().map(t=>[String(t.ts||'').slice(0,16).replace('T',' '),t.scope==='raw'?'원부자재':'완제품',t.code,t.kind==='in'?'입고':'출고',t.qty,t.who||'',t.note||'']));
   }},
