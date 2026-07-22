@@ -246,6 +246,12 @@ footer b{color:var(--ink-soft)}
 .dash .top-bar-title{font-size:16px;font-weight:600}
 .dash .top-bar-sub{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
 .badge-live{font-size:11px;font-weight:500;padding:2px 8px;border-radius:4px;background:var(--mint);color:var(--teal-deep);border:.5px solid rgba(94,234,212,.3)}
+.fx-bar{display:flex;align-items:center;gap:6px;margin-left:auto;margin-right:10px;flex-wrap:wrap}
+.fx-pill{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:6px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink);white-space:nowrap}
+.fx-pill b{color:var(--ink-faint);font-weight:600;margin-right:4px}
+.fx-pill .up{color:var(--red)}
+.fx-pill .down{color:var(--steel)}
+.fx-date{font-size:10px;color:var(--ink-faint)}
 .dash .tab-row{display:flex;flex-direction:column;gap:4px;float:left;width:188px;margin:0 18px 1rem 0;
   padding:8px;border-radius:14px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow)}
 .dash .tab{display:flex;align-items:center;gap:10px;padding:10px 12px;font-size:13px;font-weight:500;cursor:pointer;
@@ -562,6 +568,7 @@ footer b{color:var(--ink-soft)}
         <div class="top-bar-title">비엘테크 구매출고팀 대시보드</div>
         <div class="top-bar-sub">주문 → 원재료 → 재고 → 발주 → 공급업체 전체 통합</div>
       </div>
+      <div class="fx-bar" id="fx-bar" title="일일 기준환율 · 자동 갱신"></div>
       <span class="badge-live">● 실시간</span>
     </div>
 
@@ -2468,6 +2475,35 @@ function renderBOM(){
 }
 
 /* ===================== 초기화 ===================== */
+/* ===== 환율 표시 (일일 기준환율 · open.er-api.com · 키 불필요) ===== */
+async function fetchFx(){
+  const host=document.getElementById('fx-bar'); if(!host)return;
+  const CACHE='bltech_fx_cache';
+  const render=(fx,stale)=>{
+    const pairs=[['USD',fx.USD,1],['CNY',fx.CNY,1],['EUR',fx.EUR,1],['JPY(100)',fx.JPY100,1]];
+    host.innerHTML=pairs.map(([k,v,dp])=>{
+      if(v==null||!isFinite(v))return '';
+      const prev=fx.prev&&fx.prev[k==='JPY(100)'?'JPY100':k];
+      let arrow='';
+      if(prev!=null&&isFinite(prev)){const d=v-prev;if(Math.abs(d)>=0.05)arrow=` <span class="${d>0?'up':'down'}">${d>0?'▲':'▼'}${Math.abs(d).toFixed(1)}</span>`;}
+      return `<span class="fx-pill"><b>${k}</b>${v.toLocaleString(undefined,{minimumFractionDigits:dp,maximumFractionDigits:dp})}${arrow}</span>`;
+    }).join('')+`<span class="fx-date">${fx.date||''}${stale?' · 저장값':''}</span>`;
+  };
+  let cached=null; try{cached=JSON.parse(localStorage.getItem(CACHE)||'null');}catch(e){}
+  if(cached)render(cached,true);
+  try{
+    const r=await fetch('https://open.er-api.com/v6/latest/USD',{cache:'no-store'});
+    const j=await r.json();
+    if(j.result!=='success'||!j.rates||!j.rates.KRW)throw new Error('bad response');
+    const krw=j.rates.KRW;
+    const fx={USD:krw,CNY:krw/j.rates.CNY,EUR:krw/j.rates.EUR,JPY100:krw/j.rates.JPY*100,
+      date:(j.time_last_update_utc||'').slice(5,16),prev:null};
+    if(cached){ fx.prev=(cached.date===fx.date)?(cached.prev||null):{USD:cached.USD,CNY:cached.CNY,EUR:cached.EUR,JPY100:cached.JPY100}; }
+    render(fx,false);
+    try{localStorage.setItem(CACHE,JSON.stringify(fx));}catch(e){}
+  }catch(e){ if(!cached)host.innerHTML='<span class="fx-date">환율 로드 실패 (인터넷 연결 확인)</span>'; }
+}
+
 (async function boot(){
   try{
     const res=await fetch('data.json',{cache:'no-store'});
@@ -2486,6 +2522,7 @@ function renderBOM(){
     }
   }catch(e){ /* 오프라인/미설정 → 로컬 폴백 유지 */ }
   save(); renderAll(); rerenderDash(); renderFinished(); renderCodes(); renderBOM();
+  fetchFx(); setInterval(fetchFx,60*60*1000);   // 환율: 시작 시 + 1시간마다 갱신
 })();
 </script>
 </body>
