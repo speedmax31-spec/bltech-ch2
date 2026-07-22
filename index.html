@@ -150,6 +150,8 @@ button{font-family:var(--sans);cursor:pointer}
 .fin-subtabs{display:flex;gap:8px;margin:2px 0 14px}
 .fin-subtabs .fst{font-size:13px;font-weight:600;padding:7px 18px;border-radius:9px}
 #content-finished .fst.active{background:var(--teal);color:#04110f;border-color:var(--teal)}
+.dnd-hint{font-size:11px;color:var(--ink-faint);display:inline-flex;align-items:center;gap:4px}
+#content-finished.dnd-on{outline:2px dashed var(--teal);outline-offset:-6px;border-radius:12px}
 .cb-body{flex:1;border:0;border-radius:0;height:auto;min-height:0}
 /* 상단 탭 줄: 메인 탭(왼쪽) + 룰렛 게임(오른쪽 분리) */
 .topnav{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
@@ -794,6 +796,7 @@ footer b{color:var(--ink-soft)}
           <button class="xlsx-btn" onclick="pickFinishedXlsx()"><i class="ti ti-file-upload"></i> 엑셀로 재고 갱신</button>
           <button class="xlsx-btn" onclick="pickFinishedPhoto()"><i class="ti ti-camera"></i> 사진으로 갱신</button>
           <button class="xlsx-btn" onclick="exportTabXlsx('finished')"><i class="ti ti-download"></i> 엑셀 다운로드</button>
+          <span class="dnd-hint"><i class="ti ti-drag-drop"></i> 엑셀을 이 화면에 끌어다 놓아도 반영돼요</span>
           <span class="xlsx-stat" id="fin-xlsx-stat"></span>
           <span class="date-pill"><i class="ti ti-calendar" aria-hidden="true"></i><span id="fin-today"></span> 기준</span>
         </div>
@@ -1601,6 +1604,16 @@ function finXlsxStatHTML(){
   const at=ovrStamp('bltech_ovr_naesu_at');
   return `<span class="xlsx-on">✓ 최신 반영·자동저장${at?' · '+at:''}</span> <a class="xlsx-reset" onclick="resetFinishedXlsx()">원래대로</a>`;
 }
+function initFinDnD(){
+  const host=document.getElementById('content-finished'); if(!host||host._dnd)return; host._dnd=true;
+  ['dragover','dragenter'].forEach(ev=>host.addEventListener(ev,e=>{e.preventDefault();host.classList.add('dnd-on');}));
+  host.addEventListener('dragleave',e=>{if(!host.contains(e.relatedTarget))host.classList.remove('dnd-on');});
+  host.addEventListener('drop',e=>{
+    e.preventDefault();host.classList.remove('dnd-on');
+    const f=[...(e.dataTransfer&&e.dataTransfer.files||[])].find(x=>/\.(xlsx|xls)$/i.test(x.name));
+    if(f)uploadFinishedXlsx(f); else toast('엑셀 파일(.xlsx)을 놓아주세요');
+  });
+}
 function pickFinishedXlsx(){
   if(typeof XLSX==='undefined'){toast('엑셀 모듈 로딩 중 — 잠시 후 다시 시도하세요');return;}
   let inp=document.getElementById('xlsx-fin');
@@ -1884,7 +1897,8 @@ function filterDom(g,el){
 }
 function renderFinished(){
   document.getElementById('fin-today').textContent=finToday();
-  document.getElementById('fin-dom-update').textContent='2026년 7월 기준 · 매일 갱신';
+  const _fat=ovrStamp('bltech_ovr_naesu_at');
+  document.getElementById('fin-dom-update').textContent=(finXlsxActive()&&_fat)?`엑셀 업로드 기준 ${_fat}`:'2026년 7월 기준 · 매일 갱신';
   const _xs=document.getElementById('fin-xlsx-stat'); if(_xs)_xs.innerHTML=finXlsxStatHTML();
   ensureInvModal(); const _iw=document.getElementById('inv-who'); if(_iw)_iw.value=INV_WHO; renderInvHistory();
   renderDomKPI();
@@ -2717,6 +2731,7 @@ async function fetchFx(){
   }catch(e){ /* 오프라인/미설정 → 로컬 폴백 유지 */ }
   save(); renderAll(); rerenderDash(); renderFinished(); renderCodes(); renderBOM();
   fetchFx(); setInterval(fetchFx,60*60*1000);   // 환율: 시작 시 + 1시간마다 갱신
+  initFinDnD();                                  // 완제품 재고: 엑셀 드래그앤드롭
 })();
 </script>
 </body>
