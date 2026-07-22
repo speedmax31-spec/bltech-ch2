@@ -141,6 +141,11 @@ button{font-family:var(--sans);cursor:pointer}
 .cb-dock.open .cb-collapse{display:flex}   /* 열려 있을 때만 '접기' 손잡이 표시 */
 .cb-collapse i{font-size:18px}
 .cb-collapse:hover{filter:brightness(1.1)}
+/* 신규 발주서 모달 */
+.pn-hint{font-weight:400;color:var(--teal);font-size:11px}
+.pn-row{display:grid;grid-template-columns:2fr 74px 62px 92px 1.2fr 22px;gap:6px;margin-bottom:6px;align-items:center}
+.pn-row input{font-size:12.5px;padding:7px 9px}
+.pn-row .inv-del{text-align:center}
 .cb-body{flex:1;border:0;border-radius:0;height:auto;min-height:0}
 /* 상단 탭 줄: 메인 탭(왼쪽) + 룰렛 게임(오른쪽 분리) */
 .topnav{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
@@ -872,7 +877,10 @@ footer b{color:var(--ink-soft)}
           <div class="po-title">발주서 작성</div>
           <div class="po-sub">재고 부족 품목 자동 감지 → 공급처별 발주서 생성 · 인쇄</div>
         </div>
-        <span class="po-datepill"><i class="ti ti-calendar" aria-hidden="true"></i><span id="po-today"></span></span>
+        <div class="fin-actions">
+          <button class="xlsx-btn" onclick="openPoNew()"><i class="ti ti-file-plus"></i> ＋ 신규 발주서 작성</button>
+          <span class="po-datepill"><i class="ti ti-calendar" aria-hidden="true"></i><span id="po-today"></span></span>
+        </div>
       </div>
 
       <div class="kpi-row" id="kpi-po"></div>
@@ -2266,6 +2274,7 @@ function parsePoWB(buf){
     const sup=String(poFindLabel(rows,'수신',m.hi)||'').trim();
     const date=xlsDateStr(poFindLabel(rows,'발주일자',m.hi));
     const mgr=String(poFindLabel(rows,'담당자',m.hi)||'').trim();
+    const fax=String(poFindLabel(rows,'팩스수신번호',m.hi)||poFindLabel(rows,'연락처',m.hi)||'').trim();
     const g=(r,k)=>H[k]==null||r[H[k]]==null?'':String(r[H[k]]).trim();
     const num=(r,k)=>{const v=H[k]==null?null:r[H[k]];const n=Number(v);return isFinite(n)?n:0;};
     const items=[];let total=0;
@@ -2278,7 +2287,7 @@ function parsePoWB(buf){
         price:num(r,'단가'),amount:num(r,'금액'),due:xlsDateStr(H['납기요청일']!=null?r[H['납기요청일']]:null)});
     }
     if(!items.length)continue;
-    out.push({sup,date:date||sn,mgr,items,total});
+    out.push({sup,date:date||sn,mgr,fax,items,total});
   }
   return out;
 }
@@ -2306,6 +2315,7 @@ function pickPoXlsx(){
               note:(po.mgr?('담당: '+po.mgr):'')+(po.total?((po.mgr?' · ':'')+'합계 '+po.total.toLocaleString()+'원'):''),
               items:po.items,status:'가져옴(엑셀)'
             });
+            supDirUpsert(po.sup,po.mgr,po.fax,po.date);   // 거래처 담당자/연락처 자동 수집
             added++;
           }
         }
@@ -2318,6 +2328,92 @@ function pickPoXlsx(){
     };
     document.body.appendChild(inp);}
   inp.click();
+}
+
+/* ===== 신규 발주서 작성 (거래처 자동매칭) ===== */
+function supDirUpsert(name,mgr,fax,date){
+  if(!name)return; D.supDir=D.supDir||{};
+  const e=D.supDir[name]||{};
+  const newer=!e.updated||String(date||'')>=String(e.updated||'');
+  if(mgr&&(newer||!e.mgr))e.mgr=mgr;
+  if(fax&&(newer||!e.fax))e.fax=fax;
+  if(newer&&date)e.updated=date;
+  D.supDir[name]=e;
+}
+function poNewSupList(){
+  const s=new Set(Object.keys(D.supDir||{}));
+  D.purchaseOrders.forEach(p=>{if(p.sup)s.add(p.sup);});
+  (D.cats||[]).forEach(c=>(c.rows||[]).forEach(r=>{if(r.n)s.add(r.n);}));
+  return [...s].sort((a,b)=>a.localeCompare(b,'ko'));
+}
+function ensurePoModal(){
+  if(document.getElementById('poNewScrim'))return;
+  document.body.insertAdjacentHTML('beforeend',
+    '<div class="scrim" id="poNewScrim"><div class="modal" style="max-width:660px">'+
+    '<h3>신규 발주서 작성</h3><div class="body">'+
+    '<div class="fld-row">'+
+      '<div class="fld"><label>거래처 <span class="pn-hint">직접 입력 또는 목록 선택</span></label><input id="pn-sup" list="sup-datalist" placeholder="예: 에이유켐" autocomplete="off"><datalist id="sup-datalist"></datalist></div>'+
+      '<div class="fld"><label>발주일</label><input id="pn-date" type="date"></div>'+
+    '</div>'+
+    '<div class="fld-row">'+
+      '<div class="fld"><label>담당자 <span class="pn-hint" id="pn-auto"></span></label><input id="pn-mgr" placeholder="예: 문원순 부장님"></div>'+
+      '<div class="fld"><label>연락처(전화/팩스)</label><input id="pn-fax" placeholder="예: 032-589-7646"></div>'+
+    '</div>'+
+    '<div class="fld"><label>품목 <span class="pn-hint">품명 · 수량 · 단위 · 단가 · 비고</span></label><div id="pn-items"></div>'+
+    '<button class="add-mini" onclick="poNewAddRow()">＋ 품목 추가</button></div>'+
+    '<div class="fld"><label>비고 <span class="pn-hint">선택</span></label><input id="pn-note" placeholder="특이사항"></div>'+
+    '</div><div class="foot"><button class="del-btn" onclick="closePoNew()">취소</button>'+
+    '<div class="right"><button class="btn primary" onclick="savePoNew()">발주서 생성</button></div></div></div></div>');
+  document.getElementById('poNewScrim').addEventListener('click',e=>{if(e.target.id==='poNewScrim')closePoNew();});
+  const si=document.getElementById('pn-sup');
+  si.addEventListener('input',poNewSupLookup); si.addEventListener('change',poNewSupLookup);
+}
+function poNewSupLookup(){
+  const name=document.getElementById('pn-sup').value.trim();
+  const e=(D.supDir||{})[name], hint=document.getElementById('pn-auto');
+  if(e&&(e.mgr||e.fax)){
+    document.getElementById('pn-mgr').value=e.mgr||'';
+    document.getElementById('pn-fax').value=e.fax||'';
+    hint.textContent='· 자동 입력됨 (수정 가능)';
+  } else hint.textContent='';
+}
+function poNewAddRow(){
+  const host=document.getElementById('pn-items');
+  const row=document.createElement('div');row.className='pn-row';
+  row.innerHTML='<input class="pn-name" placeholder="품명"><input class="pn-qty" type="number" min="0" placeholder="수량">'+
+    '<input class="pn-unit" placeholder="단위"><input class="pn-price" type="number" min="0" placeholder="단가">'+
+    '<input class="pn-spec" placeholder="비고"><span class="inv-del" onclick="this.parentElement.remove()">✕</span>';
+  host.appendChild(row);
+}
+function openPoNew(){
+  ensurePoModal();
+  document.getElementById('sup-datalist').innerHTML=poNewSupList().map(n=>`<option value="${esc(n)}">`).join('');
+  ['pn-sup','pn-mgr','pn-fax','pn-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pn-date').value=todayStr();
+  document.getElementById('pn-auto').textContent='';
+  document.getElementById('pn-items').innerHTML=''; poNewAddRow(); poNewAddRow();
+  document.getElementById('poNewScrim').classList.add('open');
+  setTimeout(()=>{try{document.getElementById('pn-sup').focus();}catch(e){}},50);
+}
+function closePoNew(){const s=document.getElementById('poNewScrim');if(s)s.classList.remove('open');}
+function savePoNew(){
+  const sup=document.getElementById('pn-sup').value.trim();
+  if(!sup){toast('거래처를 입력하세요');return;}
+  const mgr=document.getElementById('pn-mgr').value.trim(), fax=document.getElementById('pn-fax').value.trim();
+  const date=document.getElementById('pn-date').value||todayStr(), note=document.getElementById('pn-note').value.trim();
+  const items=[...document.querySelectorAll('#pn-items .pn-row')].map(r=>{
+    const name=r.querySelector('.pn-name').value.trim();
+    if(!name)return null;
+    const qty=+r.querySelector('.pn-qty').value||0, price=+r.querySelector('.pn-price').value||0;
+    return {name,kind:'직접입력',spec:r.querySelector('.pn-spec').value.trim(),qty,
+      unit:r.querySelector('.pn-unit').value.trim(),price,amount:qty*price||0};
+  }).filter(Boolean);
+  if(!items.length){toast('품목을 1개 이상 입력하세요');return;}
+  const seq=String(D.purchaseOrders.length+1).padStart(3,'0');
+  const meta=[mgr?('담당: '+mgr):'',fax?('연락처: '+fax):'',note].filter(Boolean).join(' · ');
+  D.purchaseOrders.unshift({id:'po'+Date.now(),no:'PO-'+date.replace(/-/g,'')+'-'+seq,sup,date,due:'',note:meta,items,status:'작성완료'});
+  supDirUpsert(sup,mgr,fax,date);   // 수정한 담당자/연락처가 다음부터 기본값
+  save(); renderPO(); closePoNew(); toast('발주서가 생성되었습니다 · '+sup);
 }
 
 /* ===== 엑셀 다운로드: 탭별 + 통합 ===== */
