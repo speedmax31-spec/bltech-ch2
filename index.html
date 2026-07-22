@@ -508,6 +508,7 @@ footer b{color:var(--ink-soft)}
   <span class="clock" id="clock">—</span>
   <button class="btn" id="exportBtn" title="현재 데이터를 JSON 파일로 저장">백업</button>
   <button class="btn" id="importBtn" title="백업 JSON 파일 불러오기">복원</button>
+  <button class="btn" onclick="exportAllXlsx()" title="모든 탭 자료를 엑셀(시트별)로 다운로드"><i class="ti ti-file-spreadsheet"></i> 엑셀 다운로드</button>
   <input type="file" id="importFile" accept="application/json" hidden>
   <button class="btn primary" id="addBtn">+ 할 일 추가</button>
 </div>
@@ -2294,6 +2295,58 @@ function pickPoXlsx(){
     };
     document.body.appendChild(inp);}
   inp.click();
+}
+
+/* ===== 전체 자료 → 엑셀 다운로드 (모든 탭, 시트별) ===== */
+function exportAllXlsx(returnOnly){
+  if(typeof XLSX==='undefined'){toast('엑셀 모듈 로딩 중 — 잠시 후 다시 시도하세요');return;}
+  const wb=XLSX.utils.book_new();
+  const add=(name,header,rows)=>{const ws=XLSX.utils.aoa_to_sheet([header,...rows]);XLSX.utils.book_append_sheet(wb,ws,name.slice(0,31));};
+  const projName=id=>{const p=projById(id);return p?p.name:'';};
+  const colName=s=>{const c=COLS.find(x=>x.id===s);return c?c.name:s;};
+  // 개인 업무 보드
+  add('업무_프로젝트',['프로젝트명','구분','일정'],DB.projects.map(p=>[p.name,p.hint,p.date||'']));
+  add('업무_할일',['제목','담당','프로젝트','우선순위','상태','마감일','메모'],
+    DB.tasks.map(t=>[t.title,ownerOf(t),projName(t.proj),PRIO[t.prio]||t.prio,colName(t.status),t.due||'',t.notes||'']));
+  // 운영 현황
+  add('운영지표',['구분','지표','값','설명'],[...D.kpisOps.map(k=>['운영',k.l,k.v,k.s]),...D.kpisSup.map(k=>['공급',k.l,k.v,k.s])]);
+  add('수주현황',['No','품명','수량','상태'],D.orders.map(o=>[o.no,o.mid,o.r,o.s]));
+  add('알림',['수준','내용','시각'],D.alerts.map(a=>[a.lv,a.t,a.time]));
+  add('원재료재고',['자재명','공급업체','현재고','안전재고','리드타임','상태'],D.stocks.map(s=>[s.name,s.sup,s.curr,s.safe,s.lead,s.flag]));
+  // 공급업체 / 리스크
+  add('공급업체',['카테고리','업체명','발주건수','품목수','평균리드(일)','비고','구분'],
+    D.cats.flatMap(c=>c.rows.map(r=>[c.name,r.n,r.o,r.p,r.l==null?'':r.l,r.note||'',r.flag||''])));
+  add('리스크',['업체','카테고리','리스크요인','수준','권장조치'],D.risks.map(r=>[r.n,r.cat,r.factor,r.lv,r.act]));
+  add('장납기',['업체','구분','리드타임','비고'],D.leadrisks.map(r=>[r.n,r.f,r.l,r.note||'']));
+  // 단가·비용
+  const c=D.cost||{};
+  add('비용지표',['지표','값','설명'],(c.kpisCost||[]).map(k=>[k.l,k.v,k.s]));
+  add('단가인상품목',['품목','공급업체','카테고리','최저단가','최근단가','거래횟수'],(c.volatile||[]).map(v=>[v.name,v.sup,v.cat,v.min,v.last,v.n]));
+  add('업체별구매비중',['업체','카테고리','구매액(억)','비중(%)'],(c.costsup||[]).map(x=>[x.n,x.cat,x.cost,x.pct]));
+  add('카테고리비중',['카테고리','구매액(억)','비중(%)'],(c.catBars||[]).map(x=>[x.name,x.cost,x.pct]));
+  add('월별구매추이',['월','금액'],(c.trend||[]).map(x=>[x.m,x.v]));
+  // 완제품 재고 (입출고 반영된 현재고 기준)
+  add('완제품재고',['제품군','브랜드','Type','기재','Color','제품코드','현재고','안전재고','과부족'],
+    NAESU.map(r=>{const cur=r[6]+invNet(r[5]);return [r[0],r[1],r[2],r[3],r[4],r[5],cur,r[7],cur-r[7]];}));
+  add('입출고내역',['시각','구분','제품코드','입출','수량','입력자','메모'],
+    invTxList().map(t=>[String(t.ts||'').slice(0,16).replace('T',' '),t.scope==='raw'?'원부자재':'완제품',t.code,t.kind==='in'?'입고':'출고',t.qty,t.who||'',t.note||'']));
+  // 품목코드
+  const codeHdr=['코드','품명','규격','자산분류','중분류','소분류','단위','비고'];
+  add('코드_원부자재',codeHdr,CODES.raw);
+  add('코드_반제품',codeHdr,CODES.semi);
+  add('코드_완제품',codeHdr,CODES.fin);
+  // BOM
+  const bomRows=[];for(const k in BOM){const b=BOM[k];b.c.forEach(x=>bomRows.push([b.s,k,b.n,x[0],x[1],x[2],x[3]]));}
+  add('BOM',['구분','모품목번호','모품목명','자재코드','자재명','소요량','단위'],bomRows);
+  // 발주서
+  const poRows=[];D.purchaseOrders.forEach(po=>po.items.forEach(it=>poRows.push(
+    [po.no,po.sup,po.date,po.status,it.name,it.qty,it.unit||'',it.price!=null?it.price:'',it.amount!=null?it.amount:'',it.due||po.due||'',it.spec||''])));
+  add('발주이력',['발주번호','거래처','발주일','상태','품명','수량','단위','단가','금액','납기','비고'],poRows);
+  add('발주작성중',['거래처','구분','품명','부족','수량','단위'],D.poDraft.map(d=>[d.sup,d.kind,d.name,d.deficit,d.qty,d.unit||'']));
+  if(returnOnly)return wb;
+  const d=new Date(),p=n=>String(n).padStart(2,'0');
+  XLSX.writeFile(wb,`BLTech_통합보드_${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}.xlsx`);
+  toast('엑셀로 내보냈습니다 ('+wb.SheetNames.length+'개 시트)');
 }
 
 let bomType='FP', bomFam='all', bomScope=(typeof BOM_SCOPES!=='undefined'&&BOM_SCOPES[0])?BOM_SCOPES[0].k:'CAST';
