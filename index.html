@@ -223,6 +223,8 @@ button{font-family:var(--sans);cursor:pointer}
 .inv-hist th{color:var(--ink-faint);font-weight:600;background:var(--panel-2);position:sticky;top:0}
 .inv-hist .r{text-align:right}
 .inv-del{color:var(--red);cursor:pointer;font-weight:700}
+.inv-old{opacity:.42}
+.inv-basetag{font-size:9.5px;color:var(--ink-faint);border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-left:4px}
 /* 개인 보드: 프로젝트 달력 + 담당 메뉴 */
 .cal-wrap{background:var(--panel);border:1px solid var(--line);border-radius:13px;padding:14px;margin-bottom:22px;box-shadow:var(--shadow)}
 .cal-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -1080,7 +1082,7 @@ function save(){
 let STORE, DB, D;
 
 /* ===================== 백업 / 복원 ===================== */
-const OVR_KEYS=['bltech_ovr_naesu','bltech_ovr_naesu_at','bltech_ovr_haewoe','bltech_ovr_codes','bltech_ovr_codes_at','bltech_ovr_bom','bltech_ovr_bom_date','bltech_ovr_bom_at'];
+const OVR_KEYS=['bltech_ovr_naesu','bltech_ovr_naesu_at','bltech_ovr_haewoe','bltech_inv_baseline','bltech_ovr_codes','bltech_ovr_codes_at','bltech_ovr_bom','bltech_ovr_bom_date','bltech_ovr_bom_at'];
 function exportData(){
   const d=new Date(),p=n=>String(n).padStart(2,'0');
   const payload=JSON.parse(JSON.stringify(STORE));
@@ -1723,7 +1725,7 @@ function uploadFinishedXlsx(file){
     try{exp=parseHaewoeWB(buf);}catch(e){errs.push('수출: '+e.message);}
     if((!dom||!dom.length)&&(!exp||!exp.length)){toast('읽을 시트가 없어요 — '+(errs.join(' / ')||'형식을 확인하세요'));return;}
     const msgs=[];
-    if(dom&&dom.length){NAESU=dom;try{localStorage.setItem('bltech_ovr_naesu',JSON.stringify(dom));}catch(e){}msgs.push(`내수 ${dom.length} SKU`);}
+    if(dom&&dom.length){NAESU=dom;try{localStorage.setItem('bltech_ovr_naesu',JSON.stringify(dom));localStorage.setItem('bltech_inv_baseline',new Date().toISOString());}catch(e){}msgs.push(`내수 ${dom.length} SKU`);}
     if(exp&&exp.length){HAEWOE=exp;try{localStorage.setItem('bltech_ovr_haewoe',JSON.stringify(exp));}catch(e){}msgs.push(`수출 ${exp.length}행`);}
     try{localStorage.setItem('bltech_ovr_naesu_at',nowStamp());}catch(e){}
     renderFinished();
@@ -1765,7 +1767,7 @@ async function uploadFinishedPhoto(file){
       const code=String(x.code||'').trim().toUpperCase();
       const r=NAESU.find(n=>String(n[5]).toUpperCase()===code);
       if(!r){miss.push(code);return;}
-      if(x.cur!=null&&isFinite(+x.cur))r[6]=Math.round(+x.cur);
+      if(x.cur!=null&&isFinite(+x.cur))r[6]=Math.round(+x.cur)-invNet(code); // 사진 값 = 화면 표시값이 되도록 기존 입출고분 상쇄
       if(x.safe!=null&&isFinite(+x.safe))r[7]=Math.round(+x.safe);
       r[8]=r[6]-r[7];hit++;
     });
@@ -1791,7 +1793,8 @@ function finGauge(stock,safe){
 let INV_WHO=''; try{ INV_WHO=localStorage.getItem('bltech_inv_who')||''; }catch(e){}
 let _invCtx=null;
 function invTxList(){ D.invTx=D.invTx||[]; return D.invTx; }
-function invNet(code){ let n=0; invTxList().forEach(t=>{ if(t.scope==='fin'&&t.code===code) n+=(t.kind==='in'?t.qty:-t.qty); }); return n; }
+function invBaseline(){ try{return localStorage.getItem('bltech_inv_baseline')||'';}catch(e){return '';} }
+function invNet(code){ const b=invBaseline(); let n=0; invTxList().forEach(t=>{ if(t.scope==='fin'&&t.code===code&&(!b||String(t.ts)>b)) n+=(t.kind==='in'?t.qty:-t.qty); }); return n; }
 function setInvWho(v){ INV_WHO=(v||'').trim(); try{localStorage.setItem('bltech_inv_who',INV_WHO);}catch(e){} }
 function ensureInvModal(){
   if(document.getElementById('invScrim'))return;
@@ -1831,8 +1834,9 @@ function renderInvHistory(){
   const list=invTxList().slice(0,200);
   if(!list.length){ el.innerHTML='<div style="padding:14px;color:var(--color-text-secondary);font-size:12px">입출고 내역이 없습니다.</div>'; return; }
   const fmt=ts=>{const d=new Date(ts),p=n=>String(n).padStart(2,'0');return `${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;};
+  const _b=invBaseline();
   el.innerHTML='<table><thead><tr><th>시각</th><th>제품코드</th><th>구분</th><th class="r">수량</th><th>입력자</th><th>메모</th><th></th></tr></thead><tbody>'+
-    list.map(t=>`<tr><td>${fmt(t.ts)}</td><td style="font-weight:500">${esc(t.code)}</td>`+
+    list.map(t=>`<tr${_b&&String(t.ts)<=_b?' class="inv-old" title="엑셀 업로드 기준에 이미 포함된 기록 (재고 계산에서 제외)"':''}><td>${fmt(t.ts)}${_b&&String(t.ts)<=_b?' <span class="inv-basetag">기준반영</span>':''}</td><td style="font-weight:500">${esc(t.code)}</td>`+
       `<td style="color:${t.kind==='in'?'var(--teal)':'var(--red)'};font-weight:600">${t.kind==='in'?'입고':'출고'}</td>`+
       `<td class="r">${t.kind==='in'?'+':'-'}${t.qty.toLocaleString()}</td>`+
       `<td>${esc(t.who||'-')}</td><td style="color:var(--color-text-secondary)">${esc(t.note||'')}</td>`+
@@ -1913,10 +1917,10 @@ function recQty(d){d=+d||0;return Math.ceil(d/10)*10||d;}
 
 function getShortages(src){
   if(src==='finished'){
-    return NAESU.filter(r=>r[0]!=='R'&&r[8]<0).map(r=>({
-      kind:'완제품',name:r[5],sup:r[1],spec:r[0],
-      curr:r[6],safe:r[7],deficit:-r[8]
-    }));
+    return NAESU.filter(r=>r[0]!=='R'&&(r[6]+invNet(r[5]))-r[7]<0).map(r=>{
+      const cur=r[6]+invNet(r[5]);
+      return {kind:'완제품',name:r[5],sup:r[1],spec:r[0],curr:cur,safe:r[7],deficit:r[7]-cur};
+    });
   }
   return D.stocks.filter(s=>(+s.curr)<(+s.safe)).map(s=>({
     kind:'원재료',name:s.name,sup:s.sup,spec:s.lead||'',
