@@ -601,6 +601,7 @@ footer b{color:var(--ink-soft)}
       <div class="tab active" id="tab-ops" onclick="showTab('ops')"><i class="ti ti-activity"></i>운영 현황</div>
       <div class="tab" id="tab-code" onclick="showTab('code')"><i class="ti ti-barcode"></i>품목 코드</div>
       <div class="tab" id="tab-bom" onclick="showTab('bom')"><i class="ti ti-sitemap"></i>BOM</div>
+      <div class="tab" id="tab-costcalc" onclick="showTab('costcalc')"><i class="ti ti-calculator"></i>원가계산</div>
       <div class="tab" id="tab-finished" onclick="showTab('finished')"><i class="ti ti-package"></i>완제품 재고</div>
       <div class="tab" id="tab-po" onclick="showTab('po')"><i class="ti ti-file-invoice"></i>발주서</div>
       <div class="tab" id="tab-supplier" onclick="showTab('supplier')"><i class="ti ti-building-warehouse"></i>공급업체</div>
@@ -788,6 +789,11 @@ footer b{color:var(--ink-soft)}
     </div>
 
     <!-- 완제품 재고 -->
+    <!-- 원가계산 (하이드로겔 제조원가 PMS) -->
+    <div class="tab-content" id="content-costcalc">
+      <div class="embed-wrap"><iframe id="costcalc-frame" class="embed-frame" src="cost-calc.html" title="원가계산 · 하이드로겔 제조원가 PMS"></iframe></div>
+    </div>
+
     <div class="tab-content" id="content-finished">
       <div class="fin-top">
         <div>
