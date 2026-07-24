@@ -160,6 +160,11 @@ button{font-family:var(--sans);cursor:pointer}
 .plg-new td{padding:5px 6px;background:rgba(20,184,166,.06)}
 .plg-new input{font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);color:var(--ink);width:100%;min-width:70px}
 .plg-new input:focus{outline:none;border-color:var(--teal)}
+/* 발주 기록 표: 가로 스크롤 + 고정 헤더 */
+#content-polog .tbl-scroll{overflow-x:auto;overflow-y:auto;max-height:600px}
+#content-polog .tbl{min-width:1460px}
+#content-polog .tbl thead th{position:sticky;top:0;background:var(--color-background-secondary);z-index:2}
+#content-finished .tbl-scroll{overflow-x:auto}
 .cb-body{flex:1;border:0;border-radius:0;height:auto;min-height:0}
 /* 상단 탭 줄: 메인 탭(왼쪽) + 룰렛 게임(오른쪽 분리) */
 .topnav{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
