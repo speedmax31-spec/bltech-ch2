@@ -152,6 +152,14 @@ button{font-family:var(--sans);cursor:pointer}
 #content-finished .fst.active{background:var(--teal);color:#04110f;border-color:var(--teal)}
 .dnd-hint{font-size:11px;color:var(--ink-faint);display:inline-flex;align-items:center;gap:4px}
 #content-finished.dnd-on{outline:2px dashed var(--teal);outline-offset:-6px;border-radius:12px}
+/* 발주 현황 인라인 편집 */
+#content-polog td[contenteditable]{cursor:text}
+#content-polog td[contenteditable]:focus{outline:1.5px solid var(--teal);outline-offset:-1px;background:var(--panel-2);white-space:normal!important;overflow:visible!important;max-width:none!important}
+#content-polog .plg-name{font-weight:500;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#content-polog .plg-note{max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary)}
+.plg-new td{padding:5px 6px;background:rgba(20,184,166,.06)}
+.plg-new input{font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:var(--panel-2);color:var(--ink);width:100%;min-width:70px}
+.plg-new input:focus{outline:none;border-color:var(--teal)}
 .cb-body{flex:1;border:0;border-radius:0;height:auto;min-height:0}
 /* 상단 탭 줄: 메인 탭(왼쪽) + 룰렛 게임(오른쪽 분리) */
 .topnav{display:flex;align-items:center;gap:12px;margin-bottom:22px;flex-wrap:wrap}
@@ -722,7 +730,7 @@ footer b{color:var(--ink-soft)}
       <div class="mat-top">
         <div><div class="mat-title">발주 현황</div><div class="mat-sub">발주 기록 관리 · 입고 추적</div></div>
         <div class="fin-actions">
-          <button class="xlsx-btn" onclick="openPologNew()"><i class="ti ti-plus"></i> 발주 기록 추가</button>
+          <button class="xlsx-btn" onclick="pologFocusNew()"><i class="ti ti-plus"></i> 발주 기록 추가</button>
           <button class="xlsx-btn" onclick="pickPologXlsx()"><i class="ti ti-file-upload"></i> 엑셀로 갱신</button>
           <button class="xlsx-btn" onclick="exportTabXlsx('polog')"><i class="ti ti-download"></i> 엑셀 다운로드</button>
           <span class="xlsx-stat" id="polog-xlsx-stat"></span>
@@ -2602,28 +2610,90 @@ function renderPolog(){
     `<div class="kpi"><div class="kpi-l">미입고</div><div class="kpi-v danger">${open.length.toLocaleString()}</div><div class="kpi-s">${Math.round(openAmt/10000).toLocaleString()}만원</div></div>`+
     `<div class="kpi"><div class="kpi-l">이번 달 발주</div><div class="kpi-v warn">${mon.length.toLocaleString()}</div><div class="kpi-s">${Math.round(monAmt/10000).toLocaleString()}만원</div></div>`+
     `<div class="kpi"><div class="kpi-l">거래처</div><div class="kpi-v ok">${sups.length}</div><div class="kpi-s">누적 기준</div></div>`;
-  // 표 (최신순, 최대 PLG_LIMIT)
+  // 표 (최신순, 최대 PLG_LIMIT) — 셀 클릭으로 바로 수정, 맨 위 행에서 바로 추가
   const shown=list.slice(0,PLG_LIMIT);
-  body.innerHTML=shown.map(x=>{
-    const r=x.r, done=plgDone(r);
-    const tag=done?'<span class="status-tag st-ok">입고완</span>':'<span class="status-tag st-short">미입고</span>';
-    const quick=done?'':`<span class="ph-action accent" onclick="pologReceive(${x.i})">입고</span> `;
+  const ed=(i,c,html,extra)=>`<td contenteditable="true" spellcheck="false" data-i="${i}" data-c="${c}"${extra||''}>${html}</td>`;
+  const draft=plgNewDraft;
+  const addRow=`<tr class="plg-new">
+    <td><input id="pnf-0" type="date" value="${draft[0]||todayStr()}"></td>
+    <td><input id="pnf-1" list="plg-dl" placeholder="거래처" value="${esc(draft[1]||'')}"></td>
+    <td><input id="pnf-2" placeholder="품명 (필수)" value="${esc(draft[2]||'')}"></td>
+    <td><input id="pnf-3" placeholder="단위" value="${esc(draft[3]||'')}" style="min-width:52px"></td>
+    <td><input id="pnf-4" type="number" placeholder="수량" value="${draft[4]||''}" style="min-width:70px"></td>
+    <td><input id="pnf-5" type="number" placeholder="단가" value="${draft[5]||''}" style="min-width:76px"></td>
+    <td class="r" style="color:var(--ink-faint);font-size:11px">자동</td>
+    <td><input id="pnf-7" type="date" value="${draft[7]||''}"></td>
+    <td></td><td></td><td></td>
+    <td><input id="pnf-11" placeholder="비고" value="${esc(draft[11]||'')}"></td>
+    <td class="c"><span class="ph-action accent" onclick="pologInlineAdd()">추가</span></td>
+  </tr>`;
+  body.innerHTML=addRow+shown.map(x=>{
+    const r=x.r, done=plgDone(r), i=x.i;
+    const tag=`<span class="status-tag ${done?'st-ok':'st-short'}" style="cursor:pointer" title="클릭: 입고완 ↔ 미입고 전환" onclick="pologToggleState(${i})">${done?'입고완':'미입고'}</span>`;
     return `<tr>
-      <td style="white-space:nowrap">${esc(r[0])}</td><td>${esc(r[1])}</td>
-      <td style="font-weight:500;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r[2])}">${esc(r[2])}</td>
-      <td class="c">${esc(r[3])}</td><td class="r">${plgFmt(r[4])}</td><td class="r">${plgFmt(r[5])}</td>
-      <td class="r" style="font-weight:600">${plgFmt(r[6])}</td>
-      <td style="white-space:nowrap;color:var(--color-text-secondary)">${esc(r[7])}</td>
-      <td style="white-space:nowrap;color:var(--color-text-secondary)">${esc(r[8])}</td>
-      <td class="r">${plgFmt(r[9])}</td><td>${tag}</td>
-      <td style="max-width:170px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-text-secondary)" title="${esc(r[11])}">${esc(r[11])}</td>
-      <td class="c" style="white-space:nowrap">${quick}<span class="ph-action" onclick="openPologEdit(${x.i})">수정</span> <span class="ph-action danger" onclick="pologDel(${x.i})">✕</span></td>
+      ${ed(i,0,esc(r[0]),' style="white-space:nowrap"')}${ed(i,1,esc(r[1]))}
+      ${ed(i,2,esc(r[2]),' class="plg-name" title="'+esc(r[2])+'"')}
+      ${ed(i,3,esc(r[3]),' class="c"')}${ed(i,4,plgFmt(r[4]),' class="r"')}${ed(i,5,plgFmt(r[5]),' class="r"')}
+      ${ed(i,6,plgFmt(r[6]),' class="r" style="font-weight:600"')}
+      ${ed(i,7,esc(r[7]),' style="white-space:nowrap"')}${ed(i,8,esc(r[8]),' style="white-space:nowrap"')}
+      ${ed(i,9,plgFmt(r[9]),' class="r"')}<td>${tag}</td>
+      ${ed(i,11,esc(r[11]),' class="plg-note" title="'+esc(r[11])+'"')}
+      <td class="c"><span class="ph-action danger" onclick="pologDel(${i})">✕</span></td>
     </tr>`;
-  }).join('')||'<tr><td colspan="13" style="text-align:center;padding:1.4rem;color:var(--color-text-secondary)">조건에 맞는 기록이 없습니다</td></tr>';
+  }).join('');
+  if(!shown.length)body.insertAdjacentHTML('beforeend','<tr><td colspan="13" style="text-align:center;padding:1.4rem;color:var(--color-text-secondary)">조건에 맞는 기록이 없습니다</td></tr>');
+  let dl=document.getElementById('plg-dl');
+  if(!dl){dl=document.createElement('datalist');dl.id='plg-dl';document.body.appendChild(dl);}
+  dl.innerHTML=sups.map(s2=>`<option value="${esc(s2)}">`).join('');
+  plgWireBody(body);
   document.getElementById('plg-foot').textContent=
     `표시 ${shown.length.toLocaleString()}건 · 조건일치 ${list.length.toLocaleString()}건 · 전체 ${POLOG.length.toLocaleString()}건`+(list.length>PLG_LIMIT?' — 더 보려면 연도/거래처/검색으로 좁혀주세요':'');
   const st=document.getElementById('polog-xlsx-stat');
   if(st&&ovrStamp('bltech_ovr_polog_at'))st.innerHTML=`<span class="xlsx-on">✓ 자동저장 · ${ovrStamp('bltech_ovr_polog_at')}</span>`;
+}
+let plgNewDraft={};
+function plgWireBody(body){
+  if(body._wired)return; body._wired=true;
+  body.addEventListener('focusout',e=>{const td=e.target.closest&&e.target.closest('td[data-c]');if(td)plgCommitCell(td);});
+  body.addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+    const td=e.target.closest&&e.target.closest('td[data-c]');
+    if(td){e.preventDefault();td.blur();return;}
+    if(e.target.id&&e.target.id.startsWith('pnf-')){e.preventDefault();pologInlineAdd();}
+  });
+  body.addEventListener('input',e=>{if(e.target.id&&e.target.id.startsWith('pnf-'))plgNewDraft[+e.target.id.slice(4)]=e.target.value;});
+}
+function plgCommitCell(td){
+  const i=+td.dataset.i,c=+td.dataset.c;const r=POLOG[i];if(!r)return;
+  const raw=td.textContent.replace(/ /g,' ').trim();
+  let val;
+  if([4,5,6,9].includes(c)){const n=Number(raw.replace(/[^0-9.-]/g,''));val=raw===''?'':(isFinite(n)?Math.round(n):r[c]);}
+  else if([0,7,8].includes(c)){val=raw.replace(/[./]/g,'-');}
+  else val=raw;
+  const cur=r[c]==null?'':r[c];
+  if(String(cur)===String(val)){td.textContent=[4,5,6,9].includes(c)?plgFmt(cur):String(cur);return;}
+  r[c]=val;
+  if(c===4||c===5){const q=+r[4],p=+r[5];if(r[4]!==''&&r[5]!==''&&isFinite(q)&&isFinite(p))r[6]=Math.round(q*p);}
+  pologSave();renderPolog();toast('수정 저장됨');
+}
+function pologInlineAdd(){
+  const gv=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
+  const name=gv('pnf-2');
+  if(!name){toast('품명을 입력하세요');const el=document.getElementById('pnf-2');if(el)el.focus();return;}
+  const qty=plgNum(gv('pnf-4')),price=plgNum(gv('pnf-5'));
+  const amt=(qty!==''&&price!=='')?qty*price:'';
+  POLOG.push([gv('pnf-0')||todayStr(),gv('pnf-1'),name,gv('pnf-3'),qty,price,amt,gv('pnf-7'),'','','',gv('pnf-11')]);
+  plgNewDraft={};
+  pologSave();renderPolog();toast('발주 기록 추가됨 · '+name);
+}
+function pologToggleState(i){
+  const r=POLOG[i];if(!r)return;
+  if(plgDone(r)){r[10]='';}
+  else{r[10]='입고 完';r[8]=r[8]||todayStr();r[9]=(r[9]===''||r[9]==null)?r[4]:r[9];}
+  pologSave();renderPolog();
+}
+function pologFocusNew(){
+  setTimeout(()=>{const el=document.getElementById('pnf-2');if(el){el.focus();el.scrollIntoView({block:'center'});}},80);
 }
 function pologReceive(i){
   const r=POLOG[i]; if(!r)return;
